@@ -105,7 +105,7 @@ export default function Reports() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" fontSize={12} />
               <YAxis fontSize={12} width={40} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              <Tooltip formatter={(v) => formatCurrency(Number(v))} />
               <Legend />
               <Bar dataKey="你代墊" fill="#10b981" radius={[4, 4, 0, 0]} />
               <Bar dataKey="你的花費" fill="#f43f5e" radius={[4, 4, 0, 0]} />
@@ -128,7 +128,7 @@ export default function Reports() {
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
