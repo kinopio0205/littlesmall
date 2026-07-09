@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances } from '../store/groupStore';
+import { useIdentityStore } from '../store/identityStore';
 import Modal from '../components/Modal';
 import { formatCurrency } from '../utils/format';
 
@@ -11,12 +12,13 @@ export default function Groups() {
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
   const addGroup = useGroupStore((s) => s.addGroup);
+  const identity = useIdentityStore((s) => s.name) ?? '';
   const navigate = useNavigate();
 
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(ICONS[0]);
-  const [members, setMembers] = useState(['', '']);
+  const [members, setMembers] = useState([identity, '']);
 
   function updateMember(i: number, v: string) {
     setMembers((m) => m.map((x, idx) => (idx === i ? v : x)));
@@ -38,7 +40,7 @@ export default function Groups() {
     setShowCreate(false);
     setName('');
     setIcon(ICONS[0]);
-    setMembers(['', '']);
+    setMembers([identity, '']);
     navigate(`/groups/${id}`);
   }
 

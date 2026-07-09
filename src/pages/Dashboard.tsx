@@ -1,175 +1,158 @@
 import { useMemo, useState } from 'react';
-import { usePersonalStore } from '../store/personalStore';
-import { useGroupStore, computeGroupBalances } from '../store/groupStore';
-import { simplifyDebts } from '../utils/debt';
-import { formatCurrency, formatDate, todayISO } from '../utils/format';
-import TransactionModal from '../components/TransactionModal';
-import { Link } from 'react-router-dom';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
-
-const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#f43f5e', '#84cc16'];
+import { Link, useNavigate } from 'react-router-dom';
+import { useGroupStore } from '../store/groupStore';
+import { useIdentityStore } from '../store/identityStore';
+import { getIdentityExpenseLines, getIdentityGroupBalances } from '../utils/identity';
+import { formatCurrency, formatDate } from '../utils/format';
+import Modal from '../components/Modal';
 
 export default function Dashboard() {
-  const transactions = usePersonalStore((s) => s.transactions);
-  const categories = usePersonalStore((s) => s.categories);
+  const identity = useIdentityStore((s) => s.name)!;
   const groups = useGroupStore((s) => s.groups);
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
-  const [showAdd, setShowAdd] = useState(false);
+  const navigate = useNavigate();
+  const [showGroupPicker, setShowGroupPicker] = useState(false);
 
-  const month = todayISO().slice(0, 7);
-
-  const monthTx = useMemo(
-    () => transactions.filter((t) => t.date.startsWith(month)),
-    [transactions, month],
+  const groupBalances = useMemo(
+    () => getIdentityGroupBalances(identity, groups, expenses, settlements),
+    [identity, groups, expenses, settlements],
   );
+  const totalReceivable = groupBalances.reduce((s, g) => s + Math.max(g.balance, 0), 0);
+  const totalPayable = groupBalances.reduce((s, g) => s + Math.max(-g.balance, 0), 0);
 
-  const income = monthTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const expense = monthTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-
-  const categoryBreakdown = useMemo(() => {
-    const map = new Map<string, number>();
-    monthTx
-      .filter((t) => t.type === 'expense')
-      .forEach((t) => map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + t.amount));
-    return Array.from(map.entries())
-      .map(([categoryId, value]) => {
-        const cat = categories.find((c) => c.id === categoryId);
-        return { name: cat ? `${cat.icon} ${cat.name}` : '未分類', value };
-      })
-      .sort((a, b) => b.value - a.value);
-  }, [monthTx, categories]);
-
-  const recent = transactions.slice(0, 6);
-
-  const pendingTransfers = useMemo(() => {
-    let count = 0;
-    groups.forEach((g) => {
-      const balances = computeGroupBalances(g.id, g.members, expenses, settlements);
-      count += simplifyDebts(balances).length;
-    });
-    return count;
-  }, [groups, expenses, settlements]);
-
-  function catOf(id: string) {
-    return categories.find((c) => c.id === id);
-  }
+  const lines = useMemo(
+    () => getIdentityExpenseLines(identity, groups, expenses).slice(0, 6),
+    [identity, groups, expenses],
+  );
 
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold text-gray-800">哈囉，{identity} 👋</h1>
+        <p className="text-sm text-gray-400 mt-0.5">這是你目前的分帳狀況</p>
+      </div>
+
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-gray-400">本月收入</div>
-          <div className="text-lg font-semibold text-emerald-500 mt-1">{formatCurrency(income)}</div>
+          <div className="text-xs text-gray-400">應收</div>
+          <div className="text-lg font-semibold text-emerald-500 mt-1">{formatCurrency(totalReceivable)}</div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-gray-400">本月支出</div>
-          <div className="text-lg font-semibold text-rose-500 mt-1">{formatCurrency(expense)}</div>
+          <div className="text-xs text-gray-400">應付</div>
+          <div className="text-lg font-semibold text-rose-500 mt-1">{formatCurrency(totalPayable)}</div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-gray-400">本月結餘</div>
-          <div className="text-lg font-semibold text-gray-800 mt-1">{formatCurrency(income - expense)}</div>
+          <div className="text-xs text-gray-400">淨額</div>
+          <div className="text-lg font-semibold text-gray-800 mt-1">
+            {formatCurrency(totalReceivable - totalPayable)}
+          </div>
         </div>
       </div>
 
-      <Link
-        to="/groups"
-        className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between hover:bg-gray-50"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🤝</span>
-          <div>
-            <div className="font-medium text-gray-800">分帳群組</div>
-            <div className="text-xs text-gray-400">
-              共 {groups.length} 個群組
-              {pendingTransfers > 0 ? `，${pendingTransfers} 筆待結清` : '，皆已結清'}
-            </div>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+          <div className="font-medium text-gray-800">我的群組</div>
+          <Link to="/groups" className="text-xs text-indigo-500">
+            管理群組
+          </Link>
         </div>
-        <span className="text-gray-300">›</span>
-      </Link>
-
-      {categoryBreakdown.length > 0 && (
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="font-medium text-gray-800 mb-2">本月支出分類</div>
-          <div className="flex items-center">
-            <div className="w-36 h-36 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={categoryBreakdown} dataKey="value" nameKey="name" innerRadius={35} outerRadius={60}>
-                    {categoryBreakdown.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex-1 flex flex-col gap-1.5 pl-2">
-              {categoryBreakdown.slice(0, 5).map((c, i) => (
-                <div key={c.name} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-gray-600">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                    {c.name}
-                  </span>
-                  <span className="text-gray-800 font-medium">{formatCurrency(c.value)}</span>
+        {groupBalances.length === 0 ? (
+          <div className="text-sm text-gray-400 py-8 text-center">
+            你還沒有加入任何群組，前往「分帳群組」建立一個吧
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {groupBalances.map(({ group, balance }) => (
+              <button
+                key={group.id}
+                onClick={() => navigate(`/groups/${group.id}`)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">{group.icon}</span>
+                  <span className="text-sm text-gray-800">{group.name}</span>
                 </div>
-              ))}
-            </div>
+                <span
+                  className={`text-sm font-medium ${
+                    balance > 0.01 ? 'text-emerald-500' : balance < -0.01 ? 'text-rose-500' : 'text-gray-400'
+                  }`}
+                >
+                  {balance > 0.01
+                    ? `應收 ${formatCurrency(balance)}`
+                    : balance < -0.01
+                      ? `應付 ${formatCurrency(-balance)}`
+                      : '已結清'}
+                </span>
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-medium text-gray-800">最近記錄</div>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+          <div className="font-medium text-gray-800">最近紀錄</div>
           <Link to="/records" className="text-xs text-indigo-500">
             查看全部
           </Link>
         </div>
-        {recent.length === 0 ? (
-          <div className="text-sm text-gray-400 py-6 text-center">尚無記錄，點右下角新增</div>
+        {lines.length === 0 ? (
+          <div className="text-sm text-gray-400 py-8 text-center">尚無跟你相關的支出紀錄</div>
         ) : (
-          <div className="flex flex-col divide-y divide-gray-50">
-            {recent.map((t) => {
-              const c = catOf(t.categoryId);
-              return (
-                <div key={t.id} className="flex items-center justify-between py-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xl">{c?.icon ?? '❔'}</span>
-                    <div className="text-left">
-                      <div className="text-sm text-gray-800">{c?.name ?? '未分類'}</div>
-                      <div className="text-xs text-gray-400">
-                        {formatDate(t.date)} {t.note && `· ${t.note}`}
-                      </div>
+          <div className="divide-y divide-gray-50">
+            {lines.map(({ group, expense, share, isPayer }) => (
+              <div key={expense.id} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">{expense.icon}</span>
+                  <div className="text-left">
+                    <div className="text-sm text-gray-800">{expense.description}</div>
+                    <div className="text-xs text-gray-400">
+                      {group.icon} {group.name} · {formatDate(expense.date)}
+                      {isPayer && ' · 你付款'}
                     </div>
                   </div>
-                  <div className={`text-sm font-medium ${t.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                    {t.type === 'income' ? '+' : '-'}
-                    {formatCurrency(t.amount)}
-                  </div>
                 </div>
-              );
-            })}
+                <div className="text-sm font-medium text-gray-800">{formatCurrency(share)}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       <button
-        onClick={() => setShowAdd(true)}
+        onClick={() => (groups.length === 1 ? navigate(`/groups/${groups[0].id}?add=1`) : setShowGroupPicker(true))}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-indigo-600 text-white text-2xl shadow-lg hover:bg-indigo-700 flex items-center justify-center"
-        aria-label="新增記錄"
+        aria-label="新增支出"
       >
         +
       </button>
 
-      {showAdd && <TransactionModal onClose={() => setShowAdd(false)} />}
+      {showGroupPicker && (
+        <Modal title="在哪個群組新增支出？" onClose={() => setShowGroupPicker(false)}>
+          {groups.length === 0 ? (
+            <div className="text-sm text-gray-400 text-center py-4">
+              尚無群組，
+              <Link to="/groups" className="text-indigo-500">
+                先建立一個群組
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {groups.map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => navigate(`/groups/${g.id}?add=1`)}
+                  className="flex items-center gap-2.5 border border-gray-100 rounded-lg px-3 py-2.5 hover:border-indigo-300 text-left"
+                >
+                  <span className="text-xl">{g.icon}</span>
+                  <span className="text-sm text-gray-700">{g.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

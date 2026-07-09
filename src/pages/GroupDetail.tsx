@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances } from '../store/groupStore';
+import { useIdentityStore } from '../store/identityStore';
 import { simplifyDebts } from '../utils/debt';
 import { formatCurrency, formatDate } from '../utils/format';
 import ExpenseModal from '../components/ExpenseModal';
@@ -12,6 +13,8 @@ type Tab = 'expenses' | 'balances' | 'members';
 export default function GroupDetail() {
   const { groupId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const identity = useIdentityStore((s) => s.name);
   const groups = useGroupStore((s) => s.groups);
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
@@ -28,6 +31,23 @@ export default function GroupDetail() {
   const [showSettle, setShowSettle] = useState(false);
   const [settleDefaults, setSettleDefaults] = useState<{ from?: string; to?: string; amount?: number }>({});
   const [newMemberName, setNewMemberName] = useState('');
+
+  useEffect(() => {
+    if (!group) return;
+    if (searchParams.get('add') === '1') {
+      setEditingExpense(null);
+      setShowExpense(true);
+      setSearchParams({}, { replace: true });
+    } else if (searchParams.get('edit')) {
+      const target = expenses.find((e) => e.id === searchParams.get('edit'));
+      if (target) {
+        setEditingExpense(target);
+        setShowExpense(true);
+      }
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group?.id]);
 
   const groupExpenses = useMemo(
     () => expenses.filter((e) => e.groupId === groupId).sort((a, b) => (a.date < b.date ? 1 : -1)),
@@ -56,7 +76,9 @@ export default function GroupDetail() {
   }
 
   function memberName(id: string) {
-    return group!.members.find((m) => m.id === id)?.name ?? '未知成員';
+    const name = group!.members.find((m) => m.id === id)?.name;
+    if (!name) return '未知成員';
+    return name === identity ? '你' : name;
   }
 
   function openSettle(from?: string, to?: string, amount?: number) {
@@ -153,9 +175,13 @@ export default function GroupDetail() {
           <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
             {group.members.map((m) => {
               const bal = balances[m.id] ?? 0;
+              const isMe = m.name === identity;
               return (
-                <div key={m.id} className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-gray-700">{m.name}</span>
+                <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-indigo-50/50' : ''}`}>
+                  <span className={`text-sm ${isMe ? 'font-semibold text-indigo-700' : 'text-gray-700'}`}>
+                    {m.name}
+                    {isMe && <span className="ml-1.5 text-xs text-indigo-400">你</span>}
+                  </span>
                   <span className={`text-sm font-medium ${bal > 0.01 ? 'text-emerald-500' : bal < -0.01 ? 'text-rose-500' : 'text-gray-400'}`}>
                     {bal > 0.01 ? `應收 ${formatCurrency(bal)}` : bal < -0.01 ? `應付 ${formatCurrency(-bal)}` : '已結清'}
                   </span>
@@ -234,9 +260,13 @@ export default function GroupDetail() {
             {group.members.map((m) => {
               const bal = balances[m.id] ?? 0;
               const canRemove = Math.abs(bal) < 0.01;
+              const isMe = m.name === identity;
               return (
-                <div key={m.id} className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-gray-700">{m.name}</span>
+                <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-indigo-50/50' : ''}`}>
+                  <span className={`text-sm ${isMe ? 'font-semibold text-indigo-700' : 'text-gray-700'}`}>
+                    {m.name}
+                    {isMe && <span className="ml-1.5 text-xs text-indigo-400">你</span>}
+                  </span>
                   <button
                     disabled={!canRemove}
                     onClick={() => {

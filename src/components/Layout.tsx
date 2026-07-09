@@ -1,15 +1,18 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import clsx from 'clsx';
+import { useIdentityStore } from '../store/identityStore';
 
 const navItems = [
   { to: '/', label: '總覽', icon: '🏠', end: true },
-  { to: '/records', label: '記錄', icon: '📝' },
+  { to: '/records', label: '我的紀錄', icon: '📝' },
   { to: '/reports', label: '報表', icon: '📊' },
-  { to: '/categories', label: '分類', icon: '🏷️' },
-  { to: '/groups', label: '分帳', icon: '🤝' },
+  { to: '/groups', label: '分帳群組', icon: '🤝' },
 ];
 
 export default function Layout() {
+  const identity = useIdentityStore((s) => s.name);
+  const clearIdentity = useIdentityStore((s) => s.clearIdentity);
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
@@ -18,6 +21,16 @@ export default function Layout() {
             <span>💸</span>
             <span>小呆記帳</span>
           </div>
+          <button
+            onClick={() => {
+              if (confirm(`切換身分？目前身分為「${identity}」。`)) clearIdentity();
+            }}
+            className="flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 rounded-full px-3 py-1.5 hover:border-indigo-300 hover:text-indigo-600"
+          >
+            <span>👤</span>
+            <span>{identity}</span>
+            <span className="text-gray-300">切換</span>
+          </button>
         </div>
         <nav className="max-w-4xl mx-auto flex overflow-x-auto px-2 border-t border-gray-100">
           {navItems.map((item) => (

@@ -1,22 +1,3 @@
-export type TxType = 'income' | 'expense';
-
-export interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  type: TxType;
-}
-
-export interface Transaction {
-  id: string;
-  type: TxType;
-  amount: number;
-  categoryId: string;
-  date: string; // ISO yyyy-mm-dd
-  note: string;
-  account: string;
-}
-
 export interface Member {
   id: string;
   name: string;
