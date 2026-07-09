@@ -1,0 +1,302 @@
+import { useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useGroupStore, computeGroupBalances } from '../store/groupStore';
+import { simplifyDebts } from '../utils/debt';
+import { formatCurrency, formatDate } from '../utils/format';
+import ExpenseModal from '../components/ExpenseModal';
+import SettleModal from '../components/SettleModal';
+import type { GroupExpense } from '../types';
+
+type Tab = 'expenses' | 'balances' | 'members';
+
+export default function GroupDetail() {
+  const { groupId } = useParams();
+  const navigate = useNavigate();
+  const groups = useGroupStore((s) => s.groups);
+  const expenses = useGroupStore((s) => s.expenses);
+  const settlements = useGroupStore((s) => s.settlements);
+  const addMember = useGroupStore((s) => s.addMember);
+  const removeMember = useGroupStore((s) => s.removeMember);
+  const deleteGroup = useGroupStore((s) => s.deleteGroup);
+  const deleteSettlement = useGroupStore((s) => s.deleteSettlement);
+
+  const group = groups.find((g) => g.id === groupId);
+
+  const [tab, setTab] = useState<Tab>('expenses');
+  const [showExpense, setShowExpense] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<GroupExpense | null>(null);
+  const [showSettle, setShowSettle] = useState(false);
+  const [settleDefaults, setSettleDefaults] = useState<{ from?: string; to?: string; amount?: number }>({});
+  const [newMemberName, setNewMemberName] = useState('');
+
+  const groupExpenses = useMemo(
+    () => expenses.filter((e) => e.groupId === groupId).sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [expenses, groupId],
+  );
+  const groupSettlements = useMemo(
+    () => settlements.filter((s) => s.groupId === groupId).sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [settlements, groupId],
+  );
+
+  const balances = useMemo(
+    () => (group ? computeGroupBalances(group.id, group.members, expenses, settlements) : {}),
+    [group, expenses, settlements],
+  );
+  const transfers = useMemo(() => simplifyDebts(balances), [balances]);
+
+  if (!group) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-gray-400 mb-3">找不到此群組</div>
+        <button onClick={() => navigate('/groups')} className="text-indigo-500 text-sm">
+          返回群組列表
+        </button>
+      </div>
+    );
+  }
+
+  function memberName(id: string) {
+    return group!.members.find((m) => m.id === id)?.name ?? '未知成員';
+  }
+
+  function openSettle(from?: string, to?: string, amount?: number) {
+    setSettleDefaults({ from, to, amount });
+    setShowSettle(true);
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button onClick={() => navigate('/groups')} className="text-gray-400 hover:text-gray-700">
+            ‹
+          </button>
+          <span className="text-2xl">{group.icon}</span>
+          <h1 className="text-xl font-semibold text-gray-800">{group.name}</h1>
+        </div>
+        <button
+          onClick={() => {
+            if (confirm('刪除整個群組？此動作無法復原。')) {
+              deleteGroup(group.id);
+              navigate('/groups');
+            }
+          }}
+          className="text-xs text-gray-400 hover:text-rose-500"
+        >
+          刪除群組
+        </button>
+      </div>
+
+      <div className="flex rounded-lg overflow-hidden border border-gray-200 bg-white text-sm">
+        {(
+          [
+            ['expenses', '支出'],
+            ['balances', '餘額'],
+            ['members', '成員'],
+          ] as [Tab, string][]
+        ).map(([t, label]) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-2.5 font-medium ${tab === t ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'expenses' && (
+        <div className="flex flex-col gap-3">
+          <button
+            onClick={() => {
+              setEditingExpense(null);
+              setShowExpense(true);
+            }}
+            className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+          >
+            + 新增支出
+          </button>
+          {groupExpenses.length === 0 ? (
+            <div className="text-sm text-gray-400 py-12 text-center bg-white rounded-xl shadow-sm">
+              尚無支出記錄
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+              {groupExpenses.map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => {
+                    setEditingExpense(e);
+                    setShowExpense(true);
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{e.icon}</span>
+                    <div>
+                      <div className="text-sm text-gray-800">{e.description}</div>
+                      <div className="text-xs text-gray-400">
+                        {formatDate(e.date)} · {memberName(e.payerId)} 付款 · {e.splits.length} 人分攤
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm font-medium text-gray-800">{formatCurrency(e.amount)}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'balances' && (
+        <div className="flex flex-col gap-4">
+          <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+            {group.members.map((m) => {
+              const bal = balances[m.id] ?? 0;
+              return (
+                <div key={m.id} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-gray-700">{m.name}</span>
+                  <span className={`text-sm font-medium ${bal > 0.01 ? 'text-emerald-500' : bal < -0.01 ? 'text-rose-500' : 'text-gray-400'}`}>
+                    {bal > 0.01 ? `應收 ${formatCurrency(bal)}` : bal < -0.01 ? `應付 ${formatCurrency(-bal)}` : '已結清'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div>
+            <div className="font-medium text-gray-800 mb-2">建議轉帳</div>
+            {transfers.length === 0 ? (
+              <div className="text-sm text-gray-400 py-6 text-center bg-white rounded-xl shadow-sm">
+                目前所有人皆已結清 🎉
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+                {transfers.map((t, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-3">
+                    <div className="text-sm text-gray-700">
+                      {memberName(t.fromMemberId)} → {memberName(t.toMemberId)}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-gray-800">{formatCurrency(t.amount)}</span>
+                      <button
+                        onClick={() => openSettle(t.fromMemberId, t.toMemberId, t.amount)}
+                        className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                      >
+                        標記已還款
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => openSettle()}
+            className="w-full py-2.5 rounded-lg border border-indigo-200 text-indigo-600 text-sm font-medium hover:bg-indigo-50"
+          >
+            + 自訂記錄還款
+          </button>
+
+          {groupSettlements.length > 0 && (
+            <div>
+              <div className="font-medium text-gray-800 mb-2">還款紀錄</div>
+              <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+                {groupSettlements.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between px-4 py-3">
+                    <div className="text-sm text-gray-700">
+                      {memberName(s.fromMemberId)} → {memberName(s.toMemberId)}
+                      <span className="text-xs text-gray-400 ml-2">{formatDate(s.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-gray-800">{formatCurrency(s.amount)}</span>
+                      <button
+                        onClick={() => {
+                          if (confirm('刪除這筆還款紀錄？')) deleteSettlement(s.id);
+                        }}
+                        className="text-gray-300 hover:text-rose-500 text-sm"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'members' && (
+        <div className="flex flex-col gap-4">
+          <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+            {group.members.map((m) => {
+              const bal = balances[m.id] ?? 0;
+              const canRemove = Math.abs(bal) < 0.01;
+              return (
+                <div key={m.id} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-gray-700">{m.name}</span>
+                  <button
+                    disabled={!canRemove}
+                    onClick={() => {
+                      if (confirm(`移除成員「${m.name}」？`)) removeMember(group.id, m.id);
+                    }}
+                    className={`text-xs px-2 py-1 rounded ${canRemove ? 'text-gray-400 hover:text-rose-500' : 'text-gray-200 cursor-not-allowed'}`}
+                    title={canRemove ? '' : '尚有未結清餘額，無法移除'}
+                  >
+                    移除
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newMemberName.trim()) {
+                addMember(group.id, newMemberName.trim());
+                setNewMemberName('');
+              }
+            }}
+            className="flex gap-2"
+          >
+            <input
+              type="text"
+              value={newMemberName}
+              onChange={(e) => setNewMemberName(e.target.value)}
+              placeholder="新成員暱稱"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+            >
+              新增
+            </button>
+          </form>
+        </div>
+      )}
+
+      {showExpense && (
+        <ExpenseModal
+          group={group}
+          editing={editingExpense}
+          onClose={() => {
+            setShowExpense(false);
+            setEditingExpense(null);
+          }}
+        />
+      )}
+      {showSettle && (
+        <SettleModal
+          group={group}
+          defaultFrom={settleDefaults.from}
+          defaultTo={settleDefaults.to}
+          defaultAmount={settleDefaults.amount}
+          onClose={() => setShowSettle(false)}
+        />
+      )}
+    </div>
+  );
+}
