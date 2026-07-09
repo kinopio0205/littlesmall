@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import { useGroupStore, buildSplits } from '../store/groupStore';
 import { todayISO, formatCurrency } from '../utils/format';
@@ -34,6 +34,7 @@ export default function ExpenseModal({ group, onClose, editing }: Props) {
     }
     return {};
   });
+  const [error, setError] = useState('');
 
   const amt = parseFloat(amount) || 0;
 
@@ -49,11 +50,50 @@ export default function ExpenseModal({ group, onClose, editing }: Props) {
   const previewSum = preview.reduce((s, p) => s + p.amount, 0);
   const rawSum = participants.reduce((s, id) => s + (rawValues[id] ?? 0), 0);
 
+  useEffect(() => {
+    if (!error) return;
+    if (splitType === 'exact' && Math.abs(rawSum - amt) <= 0.01) setError('');
+    if (splitType === 'percentage' && Math.abs(rawSum - 100) <= 0.5) setError('');
+  }, [rawSum, amt, splitType, error]);
+
+  function quickFixDiff() {
+    const lastId = participants[participants.length - 1];
+    if (!lastId) return;
+    if (splitType === 'exact') {
+      const others = rawSum - (rawValues[lastId] ?? 0);
+      setRawValues((v) => ({ ...v, [lastId]: Math.round((amt - others) * 100) / 100 }));
+    } else if (splitType === 'percentage') {
+      const others = rawSum - (rawValues[lastId] ?? 0);
+      setRawValues((v) => ({ ...v, [lastId]: Math.round((100 - others) * 100) / 100 }));
+    }
+    setError('');
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!description.trim() || amt <= 0 || !payerId || participants.length === 0) return;
-    if (splitType === 'exact' && Math.abs(rawSum - amt) > 0.01) return;
-    if (splitType === 'percentage' && Math.abs(rawSum - 100) > 0.5) return;
+    setError('');
+    if (!description.trim()) {
+      setError('請輸入項目名稱');
+      return;
+    }
+    if (amt <= 0) {
+      setError('請輸入有效金額');
+      return;
+    }
+    if (!payerId || participants.length === 0) {
+      setError('請至少選擇一位參與分帳成員');
+      return;
+    }
+    if (splitType === 'exact' && Math.abs(rawSum - amt) > 0.01) {
+      setError(
+        `自訂金額合計為 ${formatCurrency(rawSum)}，與總金額 ${formatCurrency(amt)} 不符（差 ${formatCurrency(amt - rawSum)}），請調整後再送出`,
+      );
+      return;
+    }
+    if (splitType === 'percentage' && Math.abs(rawSum - 100) > 0.5) {
+      setError(`百分比合計為 ${rawSum}%，需為 100%（差 ${(100 - rawSum).toFixed(1)}%），請調整後再送出`);
+      return;
+    }
 
     const splits = buildSplits(participants, amt, splitType, rawValues);
     const payload = {
@@ -208,10 +248,25 @@ export default function ExpenseModal({ group, onClose, editing }: Props) {
               );
             })}
           </div>
-          {amt > 0 && Math.abs(previewSum - amt) > 0.02 && splitType !== 'exact' && (
+          {amt > 0 && Math.abs(previewSum - amt) > 0.02 && splitType !== 'exact' && splitType !== 'percentage' && (
             <div className="text-xs text-amber-500 mt-1">分配總額 {formatCurrency(previewSum)} 與總金額有落差</div>
           )}
         </div>
+
+        {error && (
+          <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5">
+            <span className="text-rose-500 text-sm flex-1">⚠️ {error}</span>
+            {(splitType === 'exact' || splitType === 'percentage') && participants.length > 0 && (
+              <button
+                type="button"
+                onClick={quickFixDiff}
+                className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 whitespace-nowrap"
+              >
+                自動補齊差額
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2">
           {editing && (
