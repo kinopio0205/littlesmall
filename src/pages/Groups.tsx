@@ -53,17 +53,17 @@ export default function Groups() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-800">分帳群組</h1>
+        <h1 className="text-xl font-semibold text-slate-100">分帳群組</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700"
+          className="px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-sm rounded-lg hover:from-cyan-400 hover:to-violet-500"
         >
           + 新增群組
         </button>
       </div>
 
       {groups.length === 0 ? (
-        <div className="text-sm text-gray-400 py-16 text-center bg-white rounded-xl shadow-sm">
+        <div className="text-sm text-slate-500 py-16 text-center bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl">
           尚無群組，建立一個開始跟朋友分帳吧
         </div>
       ) : (
@@ -77,18 +77,18 @@ export default function Groups() {
               <button
                 key={g.id}
                 onClick={() => navigate(`/groups/${g.id}`)}
-                className="bg-white rounded-xl p-4 shadow-sm flex items-center justify-between hover:bg-gray-50 text-left"
+                className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-4 flex items-center justify-between hover:border-cyan-400/30 text-left"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{g.icon}</span>
                   <div>
-                    <div className="font-medium text-gray-800">{g.name}</div>
-                    <div className="text-xs text-gray-400">
+                    <div className="font-medium text-slate-100">{g.name}</div>
+                    <div className="text-xs text-slate-500">
                       {g.memberIds.length} 位成員 · 總支出 {formatCurrency(total)}
                     </div>
                   </div>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${settled ? 'bg-emerald-50 text-emerald-500' : 'bg-amber-50 text-amber-500'}`}>
+                <span className={`text-xs px-2 py-1 rounded-full ${settled ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
                   {settled ? '已結清' : '未結清'}
                 </span>
               </button>
@@ -101,26 +101,26 @@ export default function Groups() {
         <Modal title="新增群組" onClose={() => setShowCreate(false)}>
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">群組名稱</label>
+              <label className="text-xs text-slate-500 mb-1 block">群組名稱</label>
               <input
                 autoFocus
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="例：日本旅行"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
                 required
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">圖示</label>
+              <label className="text-xs text-slate-500 mb-1 block">圖示</label>
               <div className="flex gap-2 flex-wrap">
                 {ICONS.map((e) => (
                   <button
                     key={e}
                     type="button"
                     onClick={() => setIcon(e)}
-                    className={`text-lg py-1.5 px-2.5 rounded-lg border ${icon === e ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'}`}
+                    className={`text-lg py-1.5 px-2.5 rounded-lg border ${icon === e ? 'border-cyan-400/60 bg-cyan-500/10' : 'border-slate-800'}`}
                   >
                     {e}
                   </button>
@@ -128,7 +128,7 @@ export default function Groups() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">成員（從名單中選擇，或新增新成員）</label>
+              <label className="text-xs text-slate-500 mb-1 block">成員（從名單中選擇，或新增新成員）</label>
               {roster.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {roster.map((m) => {
@@ -140,8 +140,8 @@ export default function Groups() {
                         onClick={() => toggleMember(m.name)}
                         className={`text-xs px-2.5 py-1 rounded-full border ${
                           checked
-                            ? 'border-indigo-400 bg-indigo-50 text-indigo-600'
-                            : 'border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600'
+                            ? 'border-cyan-400/60 bg-cyan-500/10 text-cyan-300'
+                            : 'border-slate-700 text-slate-400 hover:border-cyan-400/40 hover:text-cyan-300'
                         }`}
                       >
                         {checked ? `✓ ${m.name}` : m.name}
@@ -162,12 +162,12 @@ export default function Groups() {
                     }
                   }}
                   placeholder="輸入新成員暱稱"
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="flex-1 border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
                 />
                 <button
                   type="button"
                   onClick={addNewMember}
-                  className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+                  className="px-3 py-2 rounded-lg border border-slate-700 text-sm text-slate-300 hover:border-cyan-400/40 hover:text-cyan-300"
                 >
                   加入
                 </button>
@@ -177,13 +177,13 @@ export default function Groups() {
                   {Array.from(selected).map((n) => (
                     <span
                       key={n}
-                      className="flex items-center gap-1 text-xs pl-2.5 pr-1.5 py-1 rounded-full bg-indigo-50 text-indigo-600"
+                      className="flex items-center gap-1 text-xs pl-2.5 pr-1.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300"
                     >
                       {n}
                       <button
                         type="button"
                         onClick={() => toggleMember(n)}
-                        className="text-indigo-400 hover:text-rose-500"
+                        className="text-cyan-500 hover:text-rose-400"
                       >
                         ✕
                       </button>
@@ -194,7 +194,7 @@ export default function Groups() {
             </div>
             <button
               type="submit"
-              className="mt-1 w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+              className="mt-1 w-full py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-medium hover:from-cyan-400 hover:to-violet-500"
             >
               建立群組
             </button>

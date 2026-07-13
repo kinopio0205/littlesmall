@@ -35,12 +35,12 @@ export default function App() {
 
   if (syncError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
-          <div className="text-rose-500 text-sm mb-3">連線失敗：{syncError}</div>
+          <div className="text-rose-400 text-sm mb-3">連線失敗：{syncError}</div>
           <button
             onClick={clearCode}
-            className="text-xs text-indigo-500 border border-indigo-200 rounded-full px-3 py-1.5 hover:bg-indigo-50"
+            className="text-xs text-cyan-300 border border-cyan-400/30 rounded-full px-3 py-1.5 hover:bg-cyan-500/10"
           >
             重新輸入同步碼
           </button>
@@ -51,8 +51,8 @@ export default function App() {
 
   if (!syncReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-gray-400 text-sm">連線中…</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-500 text-sm">連線中…</div>
       </div>
     );
   }

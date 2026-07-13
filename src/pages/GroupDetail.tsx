@@ -81,8 +81,8 @@ export default function GroupDetail() {
   if (!group) {
     return (
       <div className="text-center py-16">
-        <div className="text-gray-400 mb-3">找不到此群組</div>
-        <button onClick={() => navigate('/groups')} className="text-indigo-500 text-sm">
+        <div className="text-slate-500 mb-3">找不到此群組</div>
+        <button onClick={() => navigate('/groups')} className="text-cyan-400 text-sm">
           返回群組列表
         </button>
       </div>
@@ -104,11 +104,11 @@ export default function GroupDetail() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/groups')} className="text-gray-400 hover:text-gray-700">
+          <button onClick={() => navigate('/groups')} className="text-slate-500 hover:text-slate-200">
             ‹
           </button>
           <span className="text-2xl">{group.icon}</span>
-          <h1 className="text-xl font-semibold text-gray-800">{group.name}</h1>
+          <h1 className="text-xl font-semibold text-slate-100">{group.name}</h1>
         </div>
         <button
           onClick={() => {
@@ -117,13 +117,13 @@ export default function GroupDetail() {
               navigate('/groups');
             }
           }}
-          className="text-xs text-gray-400 hover:text-rose-500"
+          className="text-xs text-slate-500 hover:text-rose-400"
         >
           刪除群組
         </button>
       </div>
 
-      <div className="flex rounded-lg overflow-hidden border border-gray-200 bg-white text-sm">
+      <div className="flex rounded-lg overflow-hidden border border-slate-800 bg-slate-900/60 backdrop-blur text-sm">
         {(
           [
             ['expenses', '支出'],
@@ -134,7 +134,7 @@ export default function GroupDetail() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2.5 font-medium ${tab === t ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            className={`flex-1 py-2.5 font-medium ${tab === t ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white' : 'text-slate-400 hover:bg-slate-800/60'}`}
           >
             {label}
           </button>
@@ -148,16 +148,16 @@ export default function GroupDetail() {
               setEditingExpense(null);
               setShowExpense(true);
             }}
-            className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+            className="w-full py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-sm font-medium hover:from-cyan-400 hover:to-violet-500"
           >
             + 新增支出
           </button>
           {groupExpenses.length === 0 ? (
-            <div className="text-sm text-gray-400 py-12 text-center bg-white rounded-xl shadow-sm">
+            <div className="text-sm text-slate-500 py-12 text-center bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl">
               尚無支出記錄
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+            <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl divide-y divide-slate-800">
               {groupExpenses.map((e) => (
                 <button
                   key={e.id}
@@ -165,18 +165,18 @@ export default function GroupDetail() {
                     setEditingExpense(e);
                     setShowExpense(true);
                   }}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left"
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/60 text-left"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">{e.icon}</span>
                     <div>
-                      <div className="text-sm text-gray-800">{e.description}</div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-sm text-slate-200">{e.description}</div>
+                      <div className="text-xs text-slate-500">
                         {formatDate(e.date)} · {memberName(e.payerId)} 付款 · {e.splits.length} 人分攤
                       </div>
                     </div>
                   </div>
-                  <div className="text-sm font-medium text-gray-800">{formatCurrency(e.amount)}</div>
+                  <div className="text-sm font-medium text-slate-100">{formatCurrency(e.amount)}</div>
                 </button>
               ))}
             </div>
@@ -186,17 +186,17 @@ export default function GroupDetail() {
 
       {tab === 'balances' && (
         <div className="flex flex-col gap-4">
-          <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+          <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl divide-y divide-slate-800">
             {groupMembers.map((m) => {
               const bal = balances[m.id] ?? 0;
               const isMe = m.name === identity;
               return (
-                <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-indigo-50/50' : ''}`}>
-                  <span className={`text-sm ${isMe ? 'font-semibold text-indigo-700' : 'text-gray-700'}`}>
+                <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-cyan-500/5' : ''}`}>
+                  <span className={`text-sm ${isMe ? 'font-semibold text-cyan-300' : 'text-slate-300'}`}>
                     {m.name}
-                    {isMe && <span className="ml-1.5 text-xs text-indigo-400">你</span>}
+                    {isMe && <span className="ml-1.5 text-xs text-cyan-500">你</span>}
                   </span>
-                  <span className={`text-sm font-medium ${bal > 0.01 ? 'text-emerald-500' : bal < -0.01 ? 'text-rose-500' : 'text-gray-400'}`}>
+                  <span className={`text-sm font-medium ${bal > 0.01 ? 'text-emerald-400' : bal < -0.01 ? 'text-rose-400' : 'text-slate-500'}`}>
                     {bal > 0.01 ? `應收 ${formatCurrency(bal)}` : bal < -0.01 ? `應付 ${formatCurrency(-bal)}` : '已結清'}
                   </span>
                 </div>
@@ -206,43 +206,43 @@ export default function GroupDetail() {
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <div className="font-medium text-gray-800">建議轉帳</div>
-              <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
+              <div className="font-medium text-slate-100">建議轉帳</div>
+              <div className="flex rounded-lg overflow-hidden border border-slate-700 text-xs">
                 <button
                   onClick={() => setTransferMode('simplified')}
-                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'simplified' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500'}`}
+                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'simplified' ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white' : 'bg-slate-900/60 text-slate-400'}`}
                 >
                   簡化轉帳
                 </button>
                 <button
                   onClick={() => setTransferMode('direct')}
-                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'direct' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500'}`}
+                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'direct' ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white' : 'bg-slate-900/60 text-slate-400'}`}
                 >
                   獨立轉帳
                 </button>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-slate-500 mb-2">
               {transferMode === 'simplified'
                 ? '轉帳筆數最少，但可能出現「A 欠 B、B 欠 C，所以改成 A 直接轉給 C」這種代轉情況'
                 : '只在有實際共同支出的兩人之間互相結算，不會出現代轉，但轉帳筆數可能較多'}
             </p>
             {transfers.length === 0 ? (
-              <div className="text-sm text-gray-400 py-6 text-center bg-white rounded-xl shadow-sm">
+              <div className="text-sm text-slate-500 py-6 text-center bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl">
                 目前所有人皆已結清 🎉
               </div>
             ) : (
-              <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+              <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl divide-y divide-slate-800">
                 {transfers.map((t, i) => (
                   <div key={i} className="flex items-center justify-between px-4 py-3">
-                    <div className="text-sm text-gray-700">
+                    <div className="text-sm text-slate-300">
                       {memberName(t.fromMemberId)} → {memberName(t.toMemberId)}
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-800">{formatCurrency(t.amount)}</span>
+                      <span className="text-sm font-medium text-slate-100">{formatCurrency(t.amount)}</span>
                       <button
                         onClick={() => openSettle(t.fromMemberId, t.toMemberId, t.amount)}
-                        className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                        className="text-xs px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
                       >
                         標記已還款
                       </button>
@@ -255,28 +255,28 @@ export default function GroupDetail() {
 
           <button
             onClick={() => openSettle()}
-            className="w-full py-2.5 rounded-lg border border-indigo-200 text-indigo-600 text-sm font-medium hover:bg-indigo-50"
+            className="w-full py-2.5 rounded-lg border border-cyan-400/30 text-cyan-300 text-sm font-medium hover:bg-cyan-500/10"
           >
             + 自訂記錄還款
           </button>
 
           {groupSettlements.length > 0 && (
             <div>
-              <div className="font-medium text-gray-800 mb-2">還款紀錄</div>
-              <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+              <div className="font-medium text-slate-100 mb-2">還款紀錄</div>
+              <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl divide-y divide-slate-800">
                 {groupSettlements.map((s) => (
                   <div key={s.id} className="flex items-center justify-between px-4 py-3">
-                    <div className="text-sm text-gray-700">
+                    <div className="text-sm text-slate-300">
                       {memberName(s.fromMemberId)} → {memberName(s.toMemberId)}
-                      <span className="text-xs text-gray-400 ml-2">{formatDate(s.date)}</span>
+                      <span className="text-xs text-slate-500 ml-2">{formatDate(s.date)}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-800">{formatCurrency(s.amount)}</span>
+                      <span className="text-sm font-medium text-slate-100">{formatCurrency(s.amount)}</span>
                       <button
                         onClick={() => {
                           if (confirm('刪除這筆還款紀錄？')) deleteSettlement(s.id);
                         }}
-                        className="text-gray-300 hover:text-rose-500 text-sm"
+                        className="text-slate-600 hover:text-rose-400 text-sm"
                       >
                         🗑
                       </button>
@@ -291,23 +291,23 @@ export default function GroupDetail() {
 
       {tab === 'members' && (
         <div className="flex flex-col gap-4">
-          <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
+          <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl divide-y divide-slate-800">
             {groupMembers.map((m) => {
               const bal = balances[m.id] ?? 0;
               const canRemove = Math.abs(bal) < 0.01;
               const isMe = m.name === identity;
               return (
-                <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-indigo-50/50' : ''}`}>
-                  <span className={`text-sm ${isMe ? 'font-semibold text-indigo-700' : 'text-gray-700'}`}>
+                <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-cyan-500/5' : ''}`}>
+                  <span className={`text-sm ${isMe ? 'font-semibold text-cyan-300' : 'text-slate-300'}`}>
                     {m.name}
-                    {isMe && <span className="ml-1.5 text-xs text-indigo-400">你</span>}
+                    {isMe && <span className="ml-1.5 text-xs text-cyan-500">你</span>}
                   </span>
                   <button
                     disabled={!canRemove}
                     onClick={() => {
                       if (confirm(`將「${m.name}」移出這個群組？（仍會保留在成員名單中）`)) removeGroupMember(group.id, m.id);
                     }}
-                    className={`text-xs px-2 py-1 rounded ${canRemove ? 'text-gray-400 hover:text-rose-500' : 'text-gray-200 cursor-not-allowed'}`}
+                    className={`text-xs px-2 py-1 rounded ${canRemove ? 'text-slate-500 hover:text-rose-400' : 'text-slate-700 cursor-not-allowed'}`}
                     title={canRemove ? '' : '尚有未結清餘額，無法移除'}
                   >
                     移除
@@ -319,14 +319,14 @@ export default function GroupDetail() {
 
           {otherKnownMembers.length > 0 && (
             <div>
-              <div className="text-xs text-gray-500 mb-1.5">從成員名單加入</div>
+              <div className="text-xs text-slate-500 mb-1.5">從成員名單加入</div>
               <div className="flex flex-wrap gap-1.5">
                 {otherKnownMembers.map((m) => (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => addNewGroupMember(group.id, m.name)}
-                    className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+                    className="text-xs px-2.5 py-1 rounded-full border border-slate-700 text-slate-400 hover:border-cyan-400/40 hover:text-cyan-300"
                   >
                     + {m.name}
                   </button>
@@ -350,11 +350,11 @@ export default function GroupDetail() {
               value={newMemberName}
               onChange={(e) => setNewMemberName(e.target.value)}
               placeholder="新成員暱稱"
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              className="flex-1 border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
             />
             <button
               type="submit"
-              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-sm font-medium hover:from-cyan-400 hover:to-violet-500"
             >
               新增
             </button>

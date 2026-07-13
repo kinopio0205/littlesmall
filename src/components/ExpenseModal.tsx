@@ -123,7 +123,7 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
     <Modal title={editing ? '編輯支出' : '新增支出'} onClose={onClose} wide>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">項目</label>
+          <label className="text-xs text-slate-500 mb-1 block">項目</label>
           <div className="flex gap-2">
             <div className="flex gap-1">
               {ICONS.map((e) => (
@@ -131,7 +131,7 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
                   key={e}
                   type="button"
                   onClick={() => setIcon(e)}
-                  className={`text-lg px-2 py-1.5 rounded-lg border ${icon === e ? 'border-indigo-500 bg-indigo-50' : 'border-gray-100'}`}
+                  className={`text-lg px-2 py-1.5 rounded-lg border ${icon === e ? 'border-cyan-400/60 bg-cyan-500/10' : 'border-slate-800'}`}
                 >
                   {e}
                 </button>
@@ -143,41 +143,41 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="例：晚餐、計程車"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-2"
+            className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-sm mt-2 text-slate-100 focus:outline-none focus:border-cyan-400/60"
             required
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">金額</label>
+            <label className="text-xs text-slate-500 mb-1 block">金額</label>
             <input
               type="number"
               step="0.01"
               min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-lg font-semibold"
+              className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-lg font-semibold text-slate-100 focus:outline-none focus:border-cyan-400/60"
               required
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">日期</label>
+            <label className="text-xs text-slate-500 mb-1 block">日期</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
             />
           </div>
         </div>
 
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">誰付的錢</label>
+          <label className="text-xs text-slate-500 mb-1 block">誰付的錢</label>
           <select
             value={payerId}
             onChange={(e) => setPayerId(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
           >
             {members.map((m) => (
               <option key={m.id} value={m.id}>
@@ -188,8 +188,8 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
         </div>
 
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">分帳方式</label>
-          <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
+          <label className="text-xs text-slate-500 mb-1 block">分帳方式</label>
+          <div className="flex rounded-lg overflow-hidden border border-slate-700 text-xs">
             {(
               [
                 ['equal', '均分'],
@@ -202,7 +202,7 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
                 key={t}
                 type="button"
                 onClick={() => setSplitType(t)}
-                className={`flex-1 py-2 font-medium ${splitType === t ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-500'}`}
+                className={`flex-1 py-2 font-medium ${splitType === t ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white' : 'bg-slate-800/60 text-slate-400'}`}
               >
                 {label}
               </button>
@@ -211,7 +211,7 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
         </div>
 
         <div>
-          <label className="text-xs text-gray-500 mb-1 block">
+          <label className="text-xs text-slate-500 mb-1 block">
             參與分帳成員
             {splitType === 'exact' && ` (合計需為 ${formatCurrency(amt)}，目前 ${formatCurrency(rawSum)})`}
             {splitType === 'percentage' && ` (合計需為 100%，目前 ${rawSum}%)`}
@@ -223,15 +223,15 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
               return (
                 <div
                   key={m.id}
-                  className={`flex items-center gap-2 border rounded-lg px-3 py-2 ${included ? 'border-gray-200' : 'border-gray-100 opacity-50'}`}
+                  className={`flex items-center gap-2 border rounded-lg px-3 py-2 ${included ? 'border-slate-700' : 'border-slate-800 opacity-50'}`}
                 >
                   <input
                     type="checkbox"
                     checked={included}
                     onChange={() => toggleParticipant(m.id)}
-                    className="shrink-0"
+                    className="shrink-0 accent-cyan-500"
                   />
-                  <span className="text-sm text-gray-700 flex-1">{m.name}</span>
+                  <span className="text-sm text-slate-300 flex-1">{m.name}</span>
                   {included && splitType !== 'equal' && (
                     <input
                       type="number"
@@ -241,11 +241,11 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
                         setRawValues((v) => ({ ...v, [m.id]: parseFloat(e.target.value) || 0 }))
                       }
                       placeholder={splitType === 'percentage' ? '%' : splitType === 'shares' ? '份數' : '金額'}
-                      className="w-20 border border-gray-200 rounded px-2 py-1 text-sm text-right"
+                      className="w-20 border border-slate-700 bg-slate-900 rounded px-2 py-1 text-sm text-right text-slate-100 focus:outline-none focus:border-cyan-400/60"
                     />
                   )}
                   {included && (
-                    <span className="text-xs text-gray-400 w-16 text-right">
+                    <span className="text-xs text-slate-500 w-16 text-right">
                       {splitEntry ? formatCurrency(splitEntry.amount) : ''}
                     </span>
                   )}
@@ -254,18 +254,18 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
             })}
           </div>
           {amt > 0 && Math.abs(previewSum - amt) > 0.02 && splitType !== 'exact' && splitType !== 'percentage' && (
-            <div className="text-xs text-amber-500 mt-1">分配總額 {formatCurrency(previewSum)} 與總金額有落差</div>
+            <div className="text-xs text-amber-400 mt-1">分配總額 {formatCurrency(previewSum)} 與總金額有落差</div>
           )}
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5">
-            <span className="text-rose-500 text-sm flex-1">⚠️ {error}</span>
+          <div className="flex items-start gap-2 bg-rose-500/10 border border-rose-500/30 rounded-lg px-3 py-2.5">
+            <span className="text-rose-400 text-sm flex-1">⚠️ {error}</span>
             {(splitType === 'exact' || splitType === 'percentage') && participants.length > 0 && (
               <button
                 type="button"
                 onClick={quickFixDiff}
-                className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 whitespace-nowrap"
+                className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 whitespace-nowrap"
               >
                 自動補齊差額
               </button>
@@ -283,14 +283,14 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
                   onClose();
                 }
               }}
-              className="flex-1 py-2.5 rounded-lg border border-rose-200 text-rose-500 text-sm font-medium hover:bg-rose-50"
+              className="flex-1 py-2.5 rounded-lg border border-rose-500/30 text-rose-400 text-sm font-medium hover:bg-rose-500/10"
             >
               刪除
             </button>
           )}
           <button
             type="submit"
-            className="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+            className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-medium hover:from-cyan-400 hover:to-violet-500"
           >
             {editing ? '儲存' : '新增支出'}
           </button>

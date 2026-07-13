@@ -1,20 +1,41 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scrollbar-color: #334155 transparent;
+}
+
 body {
   margin: 0;
   font-family: system-ui, "Segoe UI", "PingFang TC", "Microsoft JhengHei", Roboto, sans-serif;
-  background: #f4f5f7;
-  color: #1f2430;
+  background:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(34, 211, 238, 0.16), transparent),
+    radial-gradient(ellipse 900px 600px at 100% 10%, rgba(139, 92, 246, 0.14), transparent),
+    #030712;
+  background-attachment: fixed;
+  color: #e2e8f0;
 }
 
 #root {
   min-height: 100vh;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.35);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #475569;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
 }

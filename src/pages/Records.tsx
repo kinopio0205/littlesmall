@@ -42,20 +42,20 @@ export default function Records() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold text-gray-800">我的紀錄</h1>
+      <h1 className="text-xl font-semibold text-slate-100">我的紀錄</h1>
 
-      <div className="bg-white rounded-xl p-3 shadow-sm flex flex-col gap-2">
+      <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-3 flex flex-col gap-2">
         <input
           type="text"
           placeholder="搜尋項目"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm"
+          className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
         />
         <select
           value={groupFilter}
           onChange={(e) => setGroupFilter(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+          className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
         >
           <option value="all">全部群組</option>
           {myGroups.map((g) => (
@@ -67,35 +67,35 @@ export default function Records() {
       </div>
 
       {grouped.length === 0 ? (
-        <div className="text-sm text-gray-400 py-16 text-center bg-white rounded-xl shadow-sm">
+        <div className="text-sm text-slate-500 py-16 text-center bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl">
           找不到符合的紀錄
         </div>
       ) : (
         grouped.map(([date, list]) => (
-          <div key={date} className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-4 py-2 bg-gray-50 text-xs text-gray-500 font-medium">{date}</div>
-            <div className="divide-y divide-gray-50">
+          <div key={date} className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl overflow-hidden">
+            <div className="px-4 py-2 bg-slate-800/60 text-xs text-slate-400 font-medium">{date}</div>
+            <div className="divide-y divide-slate-800">
               {list.map(({ group, expense, share, isPayer }) => (
                 <button
                   key={expense.id}
                   onClick={() => navigate(`/groups/${group.id}?edit=${expense.id}`)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left"
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-800/60 text-left"
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="text-xl">{expense.icon}</span>
                     <div>
-                      <div className="text-sm text-gray-800">{expense.description}</div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-sm text-slate-200">{expense.description}</div>
+                      <div className="text-xs text-slate-500">
                         {group.icon} {group.name}
                         {isPayer && ' · 你付款'}
                       </div>
                     </div>
                   </div>
-                  <div className="text-sm font-medium text-gray-800">{formatCurrency(share)}</div>
+                  <div className="text-sm font-medium text-slate-100">{formatCurrency(share)}</div>
                 </button>
               ))}
             </div>
-            <div className="px-4 py-1.5 text-xs text-gray-400 flex justify-end">
+            <div className="px-4 py-1.5 text-xs text-slate-500 flex justify-end">
               {formatDate(date)} 小計 {formatCurrency(list.reduce((s, l) => s + l.share, 0))}
             </div>
           </div>

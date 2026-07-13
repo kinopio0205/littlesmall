@@ -17,7 +17,14 @@ import {
   CartesianGrid,
 } from 'recharts';
 
-const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#f43f5e', '#84cc16'];
+const COLORS = ['#22d3ee', '#a78bfa', '#f472b6', '#34d399', '#fbbf24', '#818cf8', '#2dd4bf', '#fb7185'];
+const TOOLTIP_STYLE = {
+  background: '#0f172a',
+  border: '1px solid #334155',
+  borderRadius: 8,
+  color: '#e2e8f0',
+  fontSize: 13,
+};
 
 export default function Reports() {
   const identity = useIdentityStore((s) => s.name)!;
@@ -74,51 +81,51 @@ export default function Reports() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-800">報表</h1>
+        <h1 className="text-xl font-semibold text-slate-100">報表</h1>
         <input
           type="month"
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+          className="border border-slate-700 bg-slate-800/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
         />
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-gray-400">你的花費</div>
-          <div className="text-lg font-semibold text-rose-500 mt-1">{formatCurrency(share)}</div>
+        <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-4">
+          <div className="text-xs text-slate-500">你的花費</div>
+          <div className="text-lg font-semibold text-rose-400 mt-1">{formatCurrency(share)}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-gray-400">你代墊</div>
-          <div className="text-lg font-semibold text-emerald-500 mt-1">{formatCurrency(paid)}</div>
+        <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-4">
+          <div className="text-xs text-slate-500">你代墊</div>
+          <div className="text-lg font-semibold text-emerald-400 mt-1">{formatCurrency(paid)}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="text-xs text-gray-400">淨額</div>
-          <div className="text-lg font-semibold text-gray-800 mt-1">{formatCurrency(paid - share)}</div>
+        <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-4">
+          <div className="text-xs text-slate-500">淨額</div>
+          <div className="text-lg font-semibold text-slate-100 mt-1">{formatCurrency(paid - share)}</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="font-medium text-gray-800 mb-2">近半年趨勢</div>
+      <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-4">
+        <div className="font-medium text-slate-100 mb-2">近半年趨勢</div>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={trend}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" fontSize={12} />
-              <YAxis fontSize={12} width={40} />
-              <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-              <Legend />
-              <Bar dataKey="你代墊" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="你的花費" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+              <XAxis dataKey="month" fontSize={12} stroke="#64748b" />
+              <YAxis fontSize={12} width={40} stroke="#64748b" />
+              <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={TOOLTIP_STYLE} />
+              <Legend wrapperStyle={{ fontSize: 13, color: '#94a3b8' }} />
+              <Bar dataKey="你代墊" fill="#34d399" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="你的花費" fill="#fb7185" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl p-4 shadow-sm">
-        <div className="font-medium text-gray-800 mb-2">各群組花費佔比</div>
+      <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-4">
+        <div className="font-medium text-slate-100 mb-2">各群組花費佔比</div>
         {groupBreakdown.length === 0 ? (
-          <div className="text-sm text-gray-400 py-6 text-center">本月尚無紀錄</div>
+          <div className="text-sm text-slate-500 py-6 text-center">本月尚無紀錄</div>
         ) : (
           <div className="flex items-center">
             <div className="w-40 h-40 shrink-0">
@@ -129,20 +136,20 @@ export default function Reports() {
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v))} contentStyle={TOOLTIP_STYLE} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
             <div className="flex-1 flex flex-col gap-1.5 pl-2">
               {groupBreakdown.map((c, i) => (
                 <div key={c.name} className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-gray-600">
+                  <span className="flex items-center gap-1.5 text-slate-300">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
                     {c.name}
                   </span>
-                  <span className="text-gray-800 font-medium">
+                  <span className="text-slate-100 font-medium">
                     {formatCurrency(c.value)}
-                    <span className="text-gray-400 ml-1">({((c.value / share) * 100 || 0).toFixed(0)}%)</span>
+                    <span className="text-slate-500 ml-1">({((c.value / share) * 100 || 0).toFixed(0)}%)</span>
                   </span>
                 </div>
               ))}
@@ -152,13 +159,13 @@ export default function Reports() {
       </div>
 
       {iconBreakdown.length > 0 && (
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <div className="font-medium text-gray-800 mb-2">依項目類型</div>
+        <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl p-4">
+          <div className="font-medium text-slate-100 mb-2">依項目類型</div>
           <div className="flex flex-col gap-1.5">
             {iconBreakdown.map((c) => (
               <div key={c.name} className="flex items-center justify-between text-sm">
                 <span className="text-lg">{c.name}</span>
-                <span className="text-gray-800 font-medium">{formatCurrency(c.value)}</span>
+                <span className="text-slate-100 font-medium">{formatCurrency(c.value)}</span>
               </div>
             ))}
           </div>
