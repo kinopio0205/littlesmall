@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
+import { getAllMemberNames } from '../utils/identity';
 import Modal from '../components/Modal';
 import { formatCurrency } from '../utils/format';
 
@@ -20,12 +21,27 @@ export default function Groups() {
   const [icon, setIcon] = useState(ICONS[0]);
   const [members, setMembers] = useState([identity, '']);
 
+  const knownNames = getAllMemberNames(groups);
+
   function updateMember(i: number, v: string) {
     setMembers((m) => m.map((x, idx) => (idx === i ? v : x)));
   }
 
   function addMemberRow() {
     setMembers((m) => [...m, '']);
+  }
+
+  function addKnownMember(known: string) {
+    setMembers((m) => {
+      if (m.includes(known)) return m;
+      const emptyIndex = m.findIndex((x) => !x.trim());
+      if (emptyIndex >= 0) {
+        const copy = [...m];
+        copy[emptyIndex] = known;
+        return copy;
+      }
+      return [...m, known];
+    });
   }
 
   function removeMemberRow(i: number) {
@@ -122,6 +138,28 @@ export default function Groups() {
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">成員</label>
+              {knownNames.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {knownNames.map((n) => {
+                    const added = members.includes(n);
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => addKnownMember(n)}
+                        disabled={added}
+                        className={`text-xs px-2.5 py-1 rounded-full border ${
+                          added
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-500'
+                            : 'border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600'
+                        }`}
+                      >
+                        {added ? `✓ ${n}` : n}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 {members.map((m, i) => (
                   <div key={i} className="flex gap-2">

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
 import { simplifyDebts, computeDirectTransfers } from '../utils/debt';
+import { getAllMemberNames } from '../utils/identity';
 import { formatCurrency, formatDate } from '../utils/format';
 import ExpenseModal from '../components/ExpenseModal';
 import SettleModal from '../components/SettleModal';
@@ -69,6 +70,12 @@ export default function GroupDetail() {
     [group, groupExpenses, groupSettlements],
   );
   const transfers = transferMode === 'simplified' ? simplifiedTransfers : directTransfers;
+
+  const otherKnownNames = useMemo(() => {
+    if (!group) return [];
+    const currentNames = new Set(group.members.map((m) => m.name));
+    return getAllMemberNames(groups).filter((n) => !currentNames.has(n));
+  }, [groups, group]);
 
   if (!group) {
     return (
@@ -308,6 +315,25 @@ export default function GroupDetail() {
               );
             })}
           </div>
+
+          {otherKnownNames.length > 0 && (
+            <div>
+              <div className="text-xs text-gray-500 mb-1.5">從其他群組加入成員</div>
+              <div className="flex flex-wrap gap-1.5">
+                {otherKnownNames.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => addMember(group.id, n)}
+                    className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+                  >
+                    + {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
