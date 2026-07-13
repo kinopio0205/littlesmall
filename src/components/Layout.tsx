@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import clsx from 'clsx';
 import { useIdentityStore } from '../store/identityStore';
+import { useSyncStore } from '../store/syncStore';
 
 const navItems = [
   { to: '/', label: '總覽', icon: '🏠', end: true },
@@ -12,25 +13,41 @@ const navItems = [
 export default function Layout() {
   const identity = useIdentityStore((s) => s.name);
   const clearIdentity = useIdentityStore((s) => s.clearIdentity);
+  const code = useSyncStore((s) => s.code);
+  const clearCode = useSyncStore((s) => s.clearCode);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2 font-bold text-lg text-indigo-600">
+        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3 gap-2">
+          <div className="flex items-center gap-2 font-bold text-lg text-indigo-600 shrink-0">
             <span>💸</span>
             <span>小呆記帳</span>
           </div>
-          <button
-            onClick={() => {
-              if (confirm(`切換身分？目前身分為「${identity}」。`)) clearIdentity();
-            }}
-            className="flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 rounded-full px-3 py-1.5 hover:border-indigo-300 hover:text-indigo-600"
-          >
-            <span>👤</span>
-            <span>{identity}</span>
-            <span className="text-gray-300">切換</span>
-          </button>
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <button
+              onClick={() => {
+                if (confirm(`切換分帳空間？目前同步碼為「${code}」，切換後需要重新輸入同步碼與身分。`)) {
+                  clearIdentity();
+                  clearCode();
+                }
+              }}
+              className="flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 rounded-full px-3 py-1.5 hover:border-indigo-300 hover:text-indigo-600 whitespace-nowrap"
+            >
+              <span>📡</span>
+              <span className="font-mono">{code}</span>
+            </button>
+            <button
+              onClick={() => {
+                if (confirm(`切換身分？目前身分為「${identity}」。`)) clearIdentity();
+              }}
+              className="flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 rounded-full px-3 py-1.5 hover:border-indigo-300 hover:text-indigo-600 whitespace-nowrap"
+            >
+              <span>👤</span>
+              <span>{identity}</span>
+              <span className="text-gray-300">切換</span>
+            </button>
+          </div>
         </div>
         <nav className="max-w-4xl mx-auto flex overflow-x-auto px-2 border-t border-gray-100">
           {navItems.map((item) => (

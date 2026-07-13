@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
 import type { Group, GroupExpense, Member, Settlement, SplitType, SplitEntry } from '../types';
 
@@ -24,8 +23,7 @@ interface GroupState {
 }
 
 export const useGroupStore = create<GroupState>()(
-  persist(
-    (set) => ({
+  (set) => ({
       groups: [],
       expenses: [],
       settlements: [],
@@ -99,9 +97,7 @@ export const useGroupStore = create<GroupState>()(
         set((state) => ({
           settlements: state.settlements.filter((s) => s.id !== id),
         })),
-    }),
-    { name: 'ledger-groups' },
-  ),
+  }),
 );
 
 /** Compute each member's net balance in a group: positive = should receive money. */
