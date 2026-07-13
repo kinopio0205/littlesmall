@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
-import { simplifyDebts } from '../utils/debt';
+import { simplifyDebts, computeDirectTransfers } from '../utils/debt';
 import { formatCurrency, formatDate } from '../utils/format';
 import ExpenseModal from '../components/ExpenseModal';
 import SettleModal from '../components/SettleModal';
@@ -31,6 +31,7 @@ export default function GroupDetail() {
   const [showSettle, setShowSettle] = useState(false);
   const [settleDefaults, setSettleDefaults] = useState<{ from?: string; to?: string; amount?: number }>({});
   const [newMemberName, setNewMemberName] = useState('');
+  const [transferMode, setTransferMode] = useState<'simplified' | 'direct'>('simplified');
 
   useEffect(() => {
     if (!group) return;
@@ -62,7 +63,12 @@ export default function GroupDetail() {
     () => (group ? computeGroupBalances(group.id, group.members, expenses, settlements) : {}),
     [group, expenses, settlements],
   );
-  const transfers = useMemo(() => simplifyDebts(balances), [balances]);
+  const simplifiedTransfers = useMemo(() => simplifyDebts(balances), [balances]);
+  const directTransfers = useMemo(
+    () => (group ? computeDirectTransfers(group.members, groupExpenses, groupSettlements) : []),
+    [group, groupExpenses, groupSettlements],
+  );
+  const transfers = transferMode === 'simplified' ? simplifiedTransfers : directTransfers;
 
   if (!group) {
     return (
@@ -191,7 +197,28 @@ export default function GroupDetail() {
           </div>
 
           <div>
-            <div className="font-medium text-gray-800 mb-2">建議轉帳</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-medium text-gray-800">建議轉帳</div>
+              <div className="flex rounded-lg overflow-hidden border border-gray-200 text-xs">
+                <button
+                  onClick={() => setTransferMode('simplified')}
+                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'simplified' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500'}`}
+                >
+                  簡化轉帳
+                </button>
+                <button
+                  onClick={() => setTransferMode('direct')}
+                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'direct' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500'}`}
+                >
+                  獨立轉帳
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mb-2">
+              {transferMode === 'simplified'
+                ? '轉帳筆數最少，但可能出現「A 欠 B、B 欠 C，所以改成 A 直接轉給 C」這種代轉情況'
+                : '只在有實際共同支出的兩人之間互相結算，不會出現代轉，但轉帳筆數可能較多'}
+            </p>
             {transfers.length === 0 ? (
               <div className="text-sm text-gray-400 py-6 text-center bg-white rounded-xl shadow-sm">
                 目前所有人皆已結清 🎉

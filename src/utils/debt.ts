@@ -1,3 +1,5 @@
+import type { GroupExpense, Member, Settlement } from '../types';
+
 export interface DebtTransfer {
   fromMemberId: string;
   toMemberId: string;
@@ -46,4 +48,51 @@ export function simplifyDebts(balances: Record<string, number>): DebtTransfer[] 
   }
 
   return transfers;
+}
+
+/**
+ * Pairwise ("independent") transfers: only nets debts between two people who
+ * actually shared an expense or settlement together — never routes A's debt
+ * through B to reach C. Produces more transactions than simplifyDebts, but
+ * every transfer traces back to a real shared expense between those two.
+ */
+export function computeDirectTransfers(
+  members: Member[],
+  expenses: GroupExpense[],
+  settlements: Settlement[],
+): DebtTransfer[] {
+  const EPS = 0.005;
+  const owe: Record<string, Record<string, number>> = {};
+
+  function add(debtor: string, creditor: string, amount: number) {
+    if (debtor === creditor || amount === 0) return;
+    owe[debtor] ??= {};
+    owe[debtor][creditor] = (owe[debtor][creditor] ?? 0) + amount;
+  }
+
+  expenses.forEach((e) => {
+    e.splits.forEach((s) => {
+      if (s.memberId !== e.payerId) add(s.memberId, e.payerId, s.amount);
+    });
+  });
+
+  settlements.forEach((s) => {
+    add(s.fromMemberId, s.toMemberId, -s.amount);
+  });
+
+  const transfers: DebtTransfer[] = [];
+  for (let i = 0; i < members.length; i++) {
+    for (let j = i + 1; j < members.length; j++) {
+      const a = members[i].id;
+      const b = members[j].id;
+      const aOwesB = owe[a]?.[b] ?? 0;
+      const bOwesA = owe[b]?.[a] ?? 0;
+      const net = Math.round((aOwesB - bOwesA) * 100) / 100;
+
+      if (net > EPS) transfers.push({ fromMemberId: a, toMemberId: b, amount: net });
+      else if (net < -EPS) transfers.push({ fromMemberId: b, toMemberId: a, amount: -net });
+    }
+  }
+
+  return transfers.sort((a, b) => b.amount - a.amount);
 }
