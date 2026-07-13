@@ -8,17 +8,18 @@ import { formatCurrency, formatDate } from '../utils/format';
 export default function Records() {
   const identity = useIdentityStore((s) => s.name)!;
   const groups = useGroupStore((s) => s.groups);
+  const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
   const navigate = useNavigate();
 
   const [groupFilter, setGroupFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  const myGroups = useMemo(() => getGroupsForIdentity(groups, identity), [groups, identity]);
+  const myGroups = useMemo(() => getGroupsForIdentity(groups, roster, identity), [groups, roster, identity]);
 
   const allLines = useMemo(
-    () => getIdentityExpenseLines(identity, groups, expenses),
-    [identity, groups, expenses],
+    () => getIdentityExpenseLines(identity, groups, roster, expenses),
+    [identity, groups, roster, expenses],
   );
 
   const filtered = useMemo(() => {

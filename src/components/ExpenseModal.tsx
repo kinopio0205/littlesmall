@@ -3,17 +3,18 @@ import Modal from './Modal';
 import { useGroupStore, buildSplits } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
 import { todayISO, formatCurrency } from '../utils/format';
-import type { GroupExpense, Group, SplitType } from '../types';
+import type { GroupExpense, Group, Member, SplitType } from '../types';
 
 interface Props {
   group: Group;
+  members: Member[];
   onClose: () => void;
   editing?: GroupExpense | null;
 }
 
 const ICONS = ['🍽️', '🚕', '🏨', '🎟️', '🛒', '☕', '🍺', '📦'];
 
-export default function ExpenseModal({ group, onClose, editing }: Props) {
+export default function ExpenseModal({ group, members, onClose, editing }: Props) {
   const addExpense = useGroupStore((s) => s.addExpense);
   const updateExpense = useGroupStore((s) => s.updateExpense);
   const deleteExpense = useGroupStore((s) => s.deleteExpense);
@@ -22,13 +23,13 @@ export default function ExpenseModal({ group, onClose, editing }: Props) {
   const [description, setDescription] = useState(editing?.description ?? '');
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
   const [payerId, setPayerId] = useState(
-    editing?.payerId ?? group.members.find((m) => m.name === identity)?.id ?? group.members[0]?.id ?? '',
+    editing?.payerId ?? members.find((m) => m.name === identity)?.id ?? members[0]?.id ?? '',
   );
   const [date, setDate] = useState(editing?.date ?? todayISO());
   const [icon, setIcon] = useState(editing?.icon ?? ICONS[0]);
   const [splitType, setSplitType] = useState<SplitType>(editing?.splitType ?? 'equal');
   const [participants, setParticipants] = useState<string[]>(
-    editing ? editing.splits.map((s) => s.memberId) : group.members.map((m) => m.id),
+    editing ? editing.splits.map((s) => s.memberId) : members.map((m) => m.id),
   );
   const [rawValues, setRawValues] = useState<Record<string, number>>(() => {
     if (editing) {
@@ -178,7 +179,7 @@ export default function ExpenseModal({ group, onClose, editing }: Props) {
             onChange={(e) => setPayerId(e.target.value)}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
           >
-            {group.members.map((m) => (
+            {members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
@@ -216,7 +217,7 @@ export default function ExpenseModal({ group, onClose, editing }: Props) {
             {splitType === 'percentage' && ` (合計需為 100%，目前 ${rawSum}%)`}
           </label>
           <div className="flex flex-col gap-2">
-            {group.members.map((m) => {
+            {members.map((m) => {
               const included = participants.includes(m.id);
               const splitEntry = preview.find((p) => p.memberId === m.id);
               return (

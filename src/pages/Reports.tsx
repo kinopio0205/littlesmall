@@ -22,12 +22,13 @@ const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6'
 export default function Reports() {
   const identity = useIdentityStore((s) => s.name)!;
   const groups = useGroupStore((s) => s.groups);
+  const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
   const [month, setMonth] = useState(todayISO().slice(0, 7));
 
   const allLines = useMemo(
-    () => getIdentityExpenseLines(identity, groups, expenses),
-    [identity, groups, expenses],
+    () => getIdentityExpenseLines(identity, groups, roster, expenses),
+    [identity, groups, roster, expenses],
   );
 
   const monthLines = useMemo(() => allLines.filter((l) => l.expense.date.startsWith(month)), [allLines, month]);

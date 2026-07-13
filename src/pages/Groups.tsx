@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGroupStore, computeGroupBalances } from '../store/groupStore';
+import { useGroupStore, computeGroupBalances, resolveGroupMembers } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
-import { getAllMemberNames } from '../utils/identity';
 import Modal from '../components/Modal';
 import { formatCurrency } from '../utils/format';
 
@@ -10,6 +9,7 @@ const ICONS = ['🤝', '✈️', '🏖️', '🍽️', '🏠', '🎉', '🎓', '
 
 export default function Groups() {
   const groups = useGroupStore((s) => s.groups);
+  const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
   const addGroup = useGroupStore((s) => s.addGroup);
@@ -19,44 +19,34 @@ export default function Groups() {
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(ICONS[0]);
-  const [members, setMembers] = useState([identity, '']);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(identity ? [identity] : []));
+  const [newMemberName, setNewMemberName] = useState('');
 
-  const knownNames = getAllMemberNames(groups);
-
-  function updateMember(i: number, v: string) {
-    setMembers((m) => m.map((x, idx) => (idx === i ? v : x)));
-  }
-
-  function addMemberRow() {
-    setMembers((m) => [...m, '']);
-  }
-
-  function addKnownMember(known: string) {
-    setMembers((m) => {
-      if (m.includes(known)) return m;
-      const emptyIndex = m.findIndex((x) => !x.trim());
-      if (emptyIndex >= 0) {
-        const copy = [...m];
-        copy[emptyIndex] = known;
-        return copy;
-      }
-      return [...m, known];
+  function toggleMember(memberName: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(memberName)) next.delete(memberName);
+      else next.add(memberName);
+      return next;
     });
   }
 
-  function removeMemberRow(i: number) {
-    setMembers((m) => m.filter((_, idx) => idx !== i));
+  function addNewMember() {
+    const trimmed = newMemberName.trim();
+    if (!trimmed) return;
+    setSelected((s) => new Set(s).add(trimmed));
+    setNewMemberName('');
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const names = members.map((m) => m.trim()).filter(Boolean);
-    if (!name.trim() || names.length === 0) return;
-    const id = addGroup(name.trim(), icon, names);
+    if (!name.trim() || selected.size === 0) return;
+    const id = addGroup(name.trim(), icon, Array.from(selected));
     setShowCreate(false);
     setName('');
     setIcon(ICONS[0]);
-    setMembers([identity, '']);
+    setSelected(new Set(identity ? [identity] : []));
+    setNewMemberName('');
     navigate(`/groups/${id}`);
   }
 
@@ -80,7 +70,8 @@ export default function Groups() {
         <div className="grid gap-3">
           {groups.map((g) => {
             const total = expenses.filter((e) => e.groupId === g.id).reduce((s, e) => s + e.amount, 0);
-            const balances = computeGroupBalances(g.id, g.members, expenses, settlements);
+            const groupMembers = resolveGroupMembers(g, roster);
+            const balances = computeGroupBalances(g.id, groupMembers, expenses, settlements);
             const settled = Object.values(balances).every((v) => Math.abs(v) < 0.01);
             return (
               <button
@@ -93,7 +84,7 @@ export default function Groups() {
                   <div>
                     <div className="font-medium text-gray-800">{g.name}</div>
                     <div className="text-xs text-gray-400">
-                      {g.members.length} 位成員 · 總支出 {formatCurrency(total)}
+                      {g.memberIds.length} 位成員 · 總支出 {formatCurrency(total)}
                     </div>
                   </div>
                 </div>
@@ -137,58 +128,69 @@ export default function Groups() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">成員</label>
-              {knownNames.length > 0 && (
+              <label className="text-xs text-gray-500 mb-1 block">成員（從名單中選擇，或新增新成員）</label>
+              {roster.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {knownNames.map((n) => {
-                    const added = members.includes(n);
+                  {roster.map((m) => {
+                    const checked = selected.has(m.name);
                     return (
                       <button
-                        key={n}
+                        key={m.id}
                         type="button"
-                        onClick={() => addKnownMember(n)}
-                        disabled={added}
+                        onClick={() => toggleMember(m.name)}
                         className={`text-xs px-2.5 py-1 rounded-full border ${
-                          added
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-500'
+                          checked
+                            ? 'border-indigo-400 bg-indigo-50 text-indigo-600'
                             : 'border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600'
                         }`}
                       >
-                        {added ? `✓ ${n}` : n}
+                        {checked ? `✓ ${m.name}` : m.name}
                       </button>
                     );
                   })}
                 </div>
               )}
-              <div className="flex flex-col gap-2">
-                {members.map((m, i) => (
-                  <div key={i} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={m}
-                      onChange={(e) => updateMember(i, e.target.value)}
-                      placeholder={`成員 ${i + 1} 暱稱`}
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                    />
-                    {members.length > 1 && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addNewMember();
+                    }
+                  }}
+                  placeholder="輸入新成員暱稱"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={addNewMember}
+                  className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+                >
+                  加入
+                </button>
+              </div>
+              {selected.size > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {Array.from(selected).map((n) => (
+                    <span
+                      key={n}
+                      className="flex items-center gap-1 text-xs pl-2.5 pr-1.5 py-1 rounded-full bg-indigo-50 text-indigo-600"
+                    >
+                      {n}
                       <button
                         type="button"
-                        onClick={() => removeMemberRow(i)}
-                        className="text-gray-400 hover:text-rose-500 px-2"
+                        onClick={() => toggleMember(n)}
+                        className="text-indigo-400 hover:text-rose-500"
                       >
                         ✕
                       </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={addMemberRow}
-                className="mt-2 text-xs text-indigo-500"
-              >
-                + 新增成員
-              </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               type="submit"

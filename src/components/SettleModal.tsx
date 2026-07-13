@@ -2,21 +2,22 @@ import { useState } from 'react';
 import Modal from './Modal';
 import { useGroupStore } from '../store/groupStore';
 import { todayISO } from '../utils/format';
-import type { Group } from '../types';
+import type { Member } from '../types';
 
 interface Props {
-  group: Group;
+  groupId: string;
+  members: Member[];
   onClose: () => void;
   defaultFrom?: string;
   defaultTo?: string;
   defaultAmount?: number;
 }
 
-export default function SettleModal({ group, onClose, defaultFrom, defaultTo, defaultAmount }: Props) {
+export default function SettleModal({ groupId, members, onClose, defaultFrom, defaultTo, defaultAmount }: Props) {
   const addSettlement = useGroupStore((s) => s.addSettlement);
 
-  const [fromMemberId, setFromMemberId] = useState(defaultFrom ?? group.members[0]?.id ?? '');
-  const [toMemberId, setToMemberId] = useState(defaultTo ?? group.members[1]?.id ?? '');
+  const [fromMemberId, setFromMemberId] = useState(defaultFrom ?? members[0]?.id ?? '');
+  const [toMemberId, setToMemberId] = useState(defaultTo ?? members[1]?.id ?? '');
   const [amount, setAmount] = useState(defaultAmount ? String(defaultAmount) : '');
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState('');
@@ -25,7 +26,7 @@ export default function SettleModal({ group, onClose, defaultFrom, defaultTo, de
     e.preventDefault();
     const amt = parseFloat(amount);
     if (!amt || amt <= 0 || fromMemberId === toMemberId) return;
-    addSettlement({ groupId: group.id, fromMemberId, toMemberId, amount: amt, date, note });
+    addSettlement({ groupId, fromMemberId, toMemberId, amount: amt, date, note });
     onClose();
   }
 
@@ -40,7 +41,7 @@ export default function SettleModal({ group, onClose, defaultFrom, defaultTo, de
               onChange={(e) => setFromMemberId(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
             >
-              {group.members.map((m) => (
+              {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
@@ -54,7 +55,7 @@ export default function SettleModal({ group, onClose, defaultFrom, defaultTo, de
               onChange={(e) => setToMemberId(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
             >
-              {group.members.map((m) => (
+              {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>

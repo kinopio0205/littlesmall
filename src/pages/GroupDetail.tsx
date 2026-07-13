@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useGroupStore, computeGroupBalances } from '../store/groupStore';
+import { useGroupStore, computeGroupBalances, resolveGroupMembers } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
 import { simplifyDebts, computeDirectTransfers } from '../utils/debt';
-import { getAllMemberNames } from '../utils/identity';
 import { formatCurrency, formatDate } from '../utils/format';
 import ExpenseModal from '../components/ExpenseModal';
 import SettleModal from '../components/SettleModal';
@@ -17,10 +16,11 @@ export default function GroupDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const identity = useIdentityStore((s) => s.name);
   const groups = useGroupStore((s) => s.groups);
+  const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
-  const addMember = useGroupStore((s) => s.addMember);
-  const removeMember = useGroupStore((s) => s.removeMember);
+  const addNewGroupMember = useGroupStore((s) => s.addNewGroupMember);
+  const removeGroupMember = useGroupStore((s) => s.removeGroupMember);
   const deleteGroup = useGroupStore((s) => s.deleteGroup);
   const deleteSettlement = useGroupStore((s) => s.deleteSettlement);
 
@@ -51,6 +51,8 @@ export default function GroupDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group?.id]);
 
+  const groupMembers = useMemo(() => (group ? resolveGroupMembers(group, roster) : []), [group, roster]);
+
   const groupExpenses = useMemo(
     () => expenses.filter((e) => e.groupId === groupId).sort((a, b) => (a.date < b.date ? 1 : -1)),
     [expenses, groupId],
@@ -61,21 +63,20 @@ export default function GroupDetail() {
   );
 
   const balances = useMemo(
-    () => (group ? computeGroupBalances(group.id, group.members, expenses, settlements) : {}),
-    [group, expenses, settlements],
+    () => (group ? computeGroupBalances(group.id, groupMembers, expenses, settlements) : {}),
+    [group, groupMembers, expenses, settlements],
   );
   const simplifiedTransfers = useMemo(() => simplifyDebts(balances), [balances]);
   const directTransfers = useMemo(
-    () => (group ? computeDirectTransfers(group.members, groupExpenses, groupSettlements) : []),
-    [group, groupExpenses, groupSettlements],
+    () => computeDirectTransfers(groupMembers, groupExpenses, groupSettlements),
+    [groupMembers, groupExpenses, groupSettlements],
   );
   const transfers = transferMode === 'simplified' ? simplifiedTransfers : directTransfers;
 
-  const otherKnownNames = useMemo(() => {
+  const otherKnownMembers = useMemo(() => {
     if (!group) return [];
-    const currentNames = new Set(group.members.map((m) => m.name));
-    return getAllMemberNames(groups).filter((n) => !currentNames.has(n));
-  }, [groups, group]);
+    return roster.filter((m) => !group.memberIds.includes(m.id));
+  }, [roster, group]);
 
   if (!group) {
     return (
@@ -89,7 +90,7 @@ export default function GroupDetail() {
   }
 
   function memberName(id: string) {
-    const name = group!.members.find((m) => m.id === id)?.name;
+    const name = groupMembers.find((m) => m.id === id)?.name;
     if (!name) return '未知成員';
     return name === identity ? '你' : name;
   }
@@ -186,7 +187,7 @@ export default function GroupDetail() {
       {tab === 'balances' && (
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
-            {group.members.map((m) => {
+            {groupMembers.map((m) => {
               const bal = balances[m.id] ?? 0;
               const isMe = m.name === identity;
               return (
@@ -291,7 +292,7 @@ export default function GroupDetail() {
       {tab === 'members' && (
         <div className="flex flex-col gap-4">
           <div className="bg-white rounded-xl shadow-sm divide-y divide-gray-50">
-            {group.members.map((m) => {
+            {groupMembers.map((m) => {
               const bal = balances[m.id] ?? 0;
               const canRemove = Math.abs(bal) < 0.01;
               const isMe = m.name === identity;
@@ -304,7 +305,7 @@ export default function GroupDetail() {
                   <button
                     disabled={!canRemove}
                     onClick={() => {
-                      if (confirm(`移除成員「${m.name}」？`)) removeMember(group.id, m.id);
+                      if (confirm(`將「${m.name}」移出這個群組？（仍會保留在成員名單中）`)) removeGroupMember(group.id, m.id);
                     }}
                     className={`text-xs px-2 py-1 rounded ${canRemove ? 'text-gray-400 hover:text-rose-500' : 'text-gray-200 cursor-not-allowed'}`}
                     title={canRemove ? '' : '尚有未結清餘額，無法移除'}
@@ -316,18 +317,18 @@ export default function GroupDetail() {
             })}
           </div>
 
-          {otherKnownNames.length > 0 && (
+          {otherKnownMembers.length > 0 && (
             <div>
-              <div className="text-xs text-gray-500 mb-1.5">從其他群組加入成員</div>
+              <div className="text-xs text-gray-500 mb-1.5">從成員名單加入</div>
               <div className="flex flex-wrap gap-1.5">
-                {otherKnownNames.map((n) => (
+                {otherKnownMembers.map((m) => (
                   <button
-                    key={n}
+                    key={m.id}
                     type="button"
-                    onClick={() => addMember(group.id, n)}
+                    onClick={() => addNewGroupMember(group.id, m.name)}
                     className="text-xs px-2.5 py-1 rounded-full border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
                   >
-                    + {n}
+                    + {m.name}
                   </button>
                 ))}
               </div>
@@ -338,7 +339,7 @@ export default function GroupDetail() {
             onSubmit={(e) => {
               e.preventDefault();
               if (newMemberName.trim()) {
-                addMember(group.id, newMemberName.trim());
+                addNewGroupMember(group.id, newMemberName.trim());
                 setNewMemberName('');
               }
             }}
@@ -364,6 +365,7 @@ export default function GroupDetail() {
       {showExpense && (
         <ExpenseModal
           group={group}
+          members={groupMembers}
           editing={editingExpense}
           onClose={() => {
             setShowExpense(false);
@@ -373,7 +375,8 @@ export default function GroupDetail() {
       )}
       {showSettle && (
         <SettleModal
-          group={group}
+          members={groupMembers}
+          groupId={group.id}
           defaultFrom={settleDefaults.from}
           defaultTo={settleDefaults.to}
           defaultAmount={settleDefaults.amount}

@@ -3,16 +3,20 @@ import { v4 as uuid } from 'uuid';
 import type { Group, GroupExpense, Member, Settlement, SplitType, SplitEntry } from '../types';
 
 interface GroupState {
+  members: Member[];
   groups: Group[];
   expenses: GroupExpense[];
   settlements: Settlement[];
+
+  addRosterMember: (name: string) => string;
 
   addGroup: (name: string, icon: string, memberNames: string[]) => string;
   updateGroup: (id: string, name: string, icon: string) => void;
   deleteGroup: (id: string) => void;
 
-  addMember: (groupId: string, name: string) => void;
-  removeMember: (groupId: string, memberId: string) => void;
+  addGroupMember: (groupId: string, memberId: string) => void;
+  addNewGroupMember: (groupId: string, name: string) => void;
+  removeGroupMember: (groupId: string, memberId: string) => void;
 
   addExpense: (expense: Omit<GroupExpense, 'id'>) => void;
   updateExpense: (id: string, expense: Omit<GroupExpense, 'id'>) => void;
@@ -22,83 +26,98 @@ interface GroupState {
   deleteSettlement: (id: string) => void;
 }
 
-export const useGroupStore = create<GroupState>()(
-  (set) => ({
-      groups: [],
-      expenses: [],
-      settlements: [],
+export const useGroupStore = create<GroupState>()((set, get) => ({
+  members: [],
+  groups: [],
+  expenses: [],
+  settlements: [],
 
-      addGroup: (name, icon, memberNames) => {
-        const id = uuid();
-        const members: Member[] = memberNames
-          .map((n) => n.trim())
-          .filter(Boolean)
-          .map((n) => ({ id: uuid(), name: n }));
-        set((state) => ({
-          groups: [
-            ...state.groups,
-            { id, name, icon, members, createdAt: new Date().toISOString() },
-          ],
-        }));
-        return id;
-      },
+  addRosterMember: (name) => {
+    const trimmed = name.trim();
+    const existing = get().members.find((m) => m.name === trimmed);
+    if (existing) return existing.id;
+    const id = uuid();
+    set((state) => ({ members: [...state.members, { id, name: trimmed }] }));
+    return id;
+  },
 
-      updateGroup: (id, name, icon) =>
-        set((state) => ({
-          groups: state.groups.map((g) => (g.id === id ? { ...g, name, icon } : g)),
-        })),
+  addGroup: (name, icon, memberNames) => {
+    const id = uuid();
+    const memberIds = memberNames
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((n) => get().addRosterMember(n));
+    set((state) => ({
+      groups: [...state.groups, { id, name, icon, memberIds, createdAt: new Date().toISOString() }],
+    }));
+    return id;
+  },
 
-      deleteGroup: (id) =>
-        set((state) => ({
-          groups: state.groups.filter((g) => g.id !== id),
-          expenses: state.expenses.filter((e) => e.groupId !== id),
-          settlements: state.settlements.filter((s) => s.groupId !== id),
-        })),
+  updateGroup: (id, name, icon) =>
+    set((state) => ({
+      groups: state.groups.map((g) => (g.id === id ? { ...g, name, icon } : g)),
+    })),
 
-      addMember: (groupId, name) =>
-        set((state) => ({
-          groups: state.groups.map((g) =>
-            g.id === groupId
-              ? { ...g, members: [...g.members, { id: uuid(), name: name.trim() }] }
-              : g,
-          ),
-        })),
+  deleteGroup: (id) =>
+    set((state) => ({
+      groups: state.groups.filter((g) => g.id !== id),
+      expenses: state.expenses.filter((e) => e.groupId !== id),
+      settlements: state.settlements.filter((s) => s.groupId !== id),
+    })),
 
-      removeMember: (groupId, memberId) =>
-        set((state) => ({
-          groups: state.groups.map((g) =>
-            g.id === groupId
-              ? { ...g, members: g.members.filter((m) => m.id !== memberId) }
-              : g,
-          ),
-        })),
+  addGroupMember: (groupId, memberId) =>
+    set((state) => ({
+      groups: state.groups.map((g) =>
+        g.id === groupId && !g.memberIds.includes(memberId)
+          ? { ...g, memberIds: [...g.memberIds, memberId] }
+          : g,
+      ),
+    })),
 
-      addExpense: (expense) =>
-        set((state) => ({
-          expenses: [{ ...expense, id: uuid() }, ...state.expenses],
-        })),
+  addNewGroupMember: (groupId, name) => {
+    const memberId = get().addRosterMember(name);
+    get().addGroupMember(groupId, memberId);
+  },
 
-      updateExpense: (id, expense) =>
-        set((state) => ({
-          expenses: state.expenses.map((e) => (e.id === id ? { ...expense, id } : e)),
-        })),
+  removeGroupMember: (groupId, memberId) =>
+    set((state) => ({
+      groups: state.groups.map((g) =>
+        g.id === groupId ? { ...g, memberIds: g.memberIds.filter((id) => id !== memberId) } : g,
+      ),
+    })),
 
-      deleteExpense: (id) =>
-        set((state) => ({
-          expenses: state.expenses.filter((e) => e.id !== id),
-        })),
+  addExpense: (expense) =>
+    set((state) => ({
+      expenses: [{ ...expense, id: uuid() }, ...state.expenses],
+    })),
 
-      addSettlement: (settlement) =>
-        set((state) => ({
-          settlements: [{ ...settlement, id: uuid() }, ...state.settlements],
-        })),
+  updateExpense: (id, expense) =>
+    set((state) => ({
+      expenses: state.expenses.map((e) => (e.id === id ? { ...expense, id } : e)),
+    })),
 
-      deleteSettlement: (id) =>
-        set((state) => ({
-          settlements: state.settlements.filter((s) => s.id !== id),
-        })),
-  }),
-);
+  deleteExpense: (id) =>
+    set((state) => ({
+      expenses: state.expenses.filter((e) => e.id !== id),
+    })),
+
+  addSettlement: (settlement) =>
+    set((state) => ({
+      settlements: [{ ...settlement, id: uuid() }, ...state.settlements],
+    })),
+
+  deleteSettlement: (id) =>
+    set((state) => ({
+      settlements: state.settlements.filter((s) => s.id !== id),
+    })),
+}));
+
+/** Resolve a group's memberIds into Member objects from the shared roster. */
+export function resolveGroupMembers(group: Group, roster: Member[]): Member[] {
+  return group.memberIds
+    .map((id) => roster.find((m) => m.id === id))
+    .filter((m): m is Member => !!m);
+}
 
 /** Compute each member's net balance in a group: positive = should receive money. */
 export function computeGroupBalances(

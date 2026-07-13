@@ -4,11 +4,11 @@ import { useIdentityStore } from '../store/identityStore';
 import { getAllMemberNames } from '../utils/identity';
 
 export default function IdentitySelect() {
-  const groups = useGroupStore((s) => s.groups);
+  const roster = useGroupStore((s) => s.members);
   const setIdentity = useIdentityStore((s) => s.setIdentity);
   const [name, setName] = useState('');
 
-  const knownNames = getAllMemberNames(groups);
+  const knownNames = getAllMemberNames(roster);
 
   function confirm(n: string) {
     if (n.trim()) setIdentity(n.trim());

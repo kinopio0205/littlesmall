@@ -37,6 +37,6 @@ export interface Group {
   id: string;
   name: string;
   icon: string;
-  members: Member[];
+  memberIds: string[];
   createdAt: string;
 }

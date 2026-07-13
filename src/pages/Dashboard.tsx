@@ -9,21 +9,22 @@ import Modal from '../components/Modal';
 export default function Dashboard() {
   const identity = useIdentityStore((s) => s.name)!;
   const groups = useGroupStore((s) => s.groups);
+  const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
   const navigate = useNavigate();
   const [showGroupPicker, setShowGroupPicker] = useState(false);
 
   const groupBalances = useMemo(
-    () => getIdentityGroupBalances(identity, groups, expenses, settlements),
-    [identity, groups, expenses, settlements],
+    () => getIdentityGroupBalances(identity, groups, roster, expenses, settlements),
+    [identity, groups, roster, expenses, settlements],
   );
   const totalReceivable = groupBalances.reduce((s, g) => s + Math.max(g.balance, 0), 0);
   const totalPayable = groupBalances.reduce((s, g) => s + Math.max(-g.balance, 0), 0);
 
   const lines = useMemo(
-    () => getIdentityExpenseLines(identity, groups, expenses).slice(0, 6),
-    [identity, groups, expenses],
+    () => getIdentityExpenseLines(identity, groups, roster, expenses).slice(0, 6),
+    [identity, groups, roster, expenses],
   );
 
   return (
