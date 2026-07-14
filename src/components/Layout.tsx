@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import { useIdentityStore } from '../store/identityStore';
 import { useSyncStore } from '../store/syncStore';
 import { useLastSpaceStore } from '../store/lastSpaceStore';
+import { usePendingInviteStore } from '../store/pendingInviteStore';
 import { buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
 
@@ -18,8 +19,11 @@ export default function Layout() {
   const identity = useIdentityStore((s) => s.name);
   const clearIdentity = useIdentityStore((s) => s.clearIdentity);
   const code = useSyncStore((s) => s.code);
+  const setCode = useSyncStore((s) => s.setCode);
   const clearCode = useSyncStore((s) => s.clearCode);
   const setLastSpace = useLastSpaceStore((s) => s.setLastSpace);
+  const pendingCode = usePendingInviteStore((s) => s.pendingCode);
+  const clearPendingInvite = usePendingInviteStore((s) => s.clearPending);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -46,6 +50,14 @@ export default function Layout() {
       clearIdentity();
       clearCode();
     }
+  }
+
+  function acceptInvite() {
+    if (!pendingCode) return;
+    if (code && identity) setLastSpace({ code, identity });
+    clearIdentity();
+    setCode(pendingCode);
+    clearPendingInvite();
   }
 
   return (
@@ -118,6 +130,29 @@ export default function Layout() {
           ))}
         </nav>
       </header>
+      {pendingCode && pendingCode !== code && (
+        <div className="bg-cyan-500/10 border-b border-cyan-400/20">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+            <span className="text-cyan-200">
+              有邀請連結想加入分帳空間 <span className="font-mono">{pendingCode}</span>
+            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={acceptInvite}
+                className="text-xs px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:from-cyan-400 hover:to-violet-500"
+              >
+                切換過去
+              </button>
+              <button
+                onClick={clearPendingInvite}
+                className="text-xs px-3 py-1.5 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200"
+              >
+                忽略
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
         <Outlet />
       </main>

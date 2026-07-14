@@ -10,6 +10,7 @@ import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
 import { useIdentityStore } from './store/identityStore';
 import { useSyncStore } from './store/syncStore';
+import { usePendingInviteStore } from './store/pendingInviteStore';
 import { connectSync, disconnectSync } from './sync/firestoreSync';
 import { normalizeSyncCode } from './utils/syncCode';
 
@@ -18,20 +19,41 @@ export default function App() {
   const code = useSyncStore((s) => s.code);
   const setCode = useSyncStore((s) => s.setCode);
   const clearCode = useSyncStore((s) => s.clearCode);
+  const setPendingInvite = usePendingInviteStore((s) => s.setPending);
   const [syncReady, setSyncReady] = useState(false);
   const [syncError, setSyncError] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const invited = params.get('code');
-    if (invited && !useSyncStore.getState().code) {
-      const normalized = normalizeSyncCode(invited);
-      if (normalized.length >= 4) setCode(normalized);
+    if (!invited) return;
+
+    params.delete('code');
+    const query = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+
+    const normalized = normalizeSyncCode(invited);
+    if (normalized.length < 4) return;
+
+    // Wait for the persisted sync code to actually finish loading from localStorage
+    // before deciding whether we're "already in a space" — reading getState() before
+    // hydration completes would otherwise look like a fresh browser with no space yet.
+    function apply() {
+      const currentCode = useSyncStore.getState().code;
+      if (!currentCode) {
+        setCode(normalized);
+      } else if (normalized !== currentCode) {
+        setPendingInvite(normalized);
+      }
     }
-    if (invited) {
-      params.delete('code');
-      const query = params.toString();
-      window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+
+    if (useSyncStore.persist.hasHydrated()) {
+      apply();
+    } else {
+      const unsub = useSyncStore.persist.onFinishHydration(() => {
+        apply();
+        unsub();
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
