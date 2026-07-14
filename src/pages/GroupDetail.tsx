@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances, resolveGroupMembers } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
-import { simplifyDebts, computeDirectTransfers } from '../utils/debt';
+import { computeDirectTransfers } from '../utils/debt';
 import { formatCurrency, formatDate } from '../utils/format';
 import ExpenseModal from '../components/ExpenseModal';
 import SettleModal from '../components/SettleModal';
@@ -32,7 +32,6 @@ export default function GroupDetail() {
   const [showSettle, setShowSettle] = useState(false);
   const [settleDefaults, setSettleDefaults] = useState<{ from?: string; to?: string; amount?: number }>({});
   const [newMemberName, setNewMemberName] = useState('');
-  const [transferMode, setTransferMode] = useState<'simplified' | 'direct'>('simplified');
 
   useEffect(() => {
     if (!group) return;
@@ -46,6 +45,15 @@ export default function GroupDetail() {
         setEditingExpense(target);
         setShowExpense(true);
       }
+      setSearchParams({}, { replace: true });
+    } else if (searchParams.get('settleFrom') && searchParams.get('settleTo')) {
+      setTab('balances');
+      setSettleDefaults({
+        from: searchParams.get('settleFrom') ?? undefined,
+        to: searchParams.get('settleTo') ?? undefined,
+        amount: searchParams.get('settleAmount') ? Number(searchParams.get('settleAmount')) : undefined,
+      });
+      setShowSettle(true);
       setSearchParams({}, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,12 +74,10 @@ export default function GroupDetail() {
     () => (group ? computeGroupBalances(group.id, groupMembers, expenses, settlements) : {}),
     [group, groupMembers, expenses, settlements],
   );
-  const simplifiedTransfers = useMemo(() => simplifyDebts(balances), [balances]);
-  const directTransfers = useMemo(
+  const transfers = useMemo(
     () => computeDirectTransfers(groupMembers, groupExpenses, groupSettlements),
     [groupMembers, groupExpenses, groupSettlements],
   );
-  const transfers = transferMode === 'simplified' ? simplifiedTransfers : directTransfers;
 
   const otherKnownMembers = useMemo(() => {
     if (!group) return [];
@@ -205,27 +211,9 @@ export default function GroupDetail() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-medium text-slate-100">建議轉帳</div>
-              <div className="flex rounded-lg overflow-hidden border border-slate-700 text-xs">
-                <button
-                  onClick={() => setTransferMode('simplified')}
-                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'simplified' ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white' : 'bg-slate-900/60 text-slate-400'}`}
-                >
-                  簡化轉帳
-                </button>
-                <button
-                  onClick={() => setTransferMode('direct')}
-                  className={`px-2.5 py-1.5 font-medium ${transferMode === 'direct' ? 'bg-gradient-to-r from-cyan-500 to-violet-600 text-white' : 'bg-slate-900/60 text-slate-400'}`}
-                >
-                  獨立轉帳
-                </button>
-              </div>
-            </div>
+            <div className="font-medium text-slate-100 mb-1">建議轉帳</div>
             <p className="text-xs text-slate-500 mb-2">
-              {transferMode === 'simplified'
-                ? '轉帳筆數最少，但可能出現「A 欠 B、B 欠 C，所以改成 A 直接轉給 C」這種代轉情況'
-                : '只在有實際共同支出的兩人之間互相結算，不會出現代轉，但轉帳筆數可能較多'}
+              只在有實際共同支出的兩人之間互相結算，每筆轉帳都能追溯到真實的共同花費
             </p>
             {transfers.length === 0 ? (
               <div className="text-sm text-slate-500 py-6 text-center bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl">

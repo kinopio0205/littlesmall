@@ -6,6 +6,7 @@ import IdentitySelect from './components/IdentitySelect';
 import Dashboard from './pages/Dashboard';
 import Records from './pages/Records';
 import Reports from './pages/Reports';
+import Balances from './pages/Balances';
 import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
 import { useIdentityStore } from './store/identityStore';
@@ -104,6 +105,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/records" element={<Records />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/balances" element={<Balances />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/groups/:groupId" element={<GroupDetail />} />
       </Route>

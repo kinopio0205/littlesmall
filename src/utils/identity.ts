@@ -1,5 +1,6 @@
 import type { Group, GroupExpense, Member, Settlement } from '../types';
 import { computeGroupBalances, resolveGroupMembers } from '../store/groupStore';
+import { computeDirectTransfers } from './debt';
 
 export function getAllMemberNames(roster: Member[]): string[] {
   return [...roster]
@@ -67,6 +68,67 @@ export function getIdentityGroupBalances(
     const balances = computeGroupBalances(g.id, groupMembers, expenses, settlements);
     return { group: g, balance: balances[member.id] ?? 0 };
   });
+}
+
+export interface PersonalLedgerGroupEntry {
+  group: Group;
+  amount: number;
+  youOwe: boolean;
+  fromMemberId: string;
+  toMemberId: string;
+}
+
+export interface PersonalLedgerEntry {
+  otherName: string;
+  net: number; // positive = they owe you overall, negative = you owe them overall
+  entries: PersonalLedgerGroupEntry[];
+}
+
+/**
+ * Per-person balance from this identity's perspective, broken down by the
+ * specific group each portion came from (so it can link back to that group's
+ * own suggested-transfer / settle flow). Reuses the same direct/pairwise
+ * calculation as each group's balances tab, just filtered to this identity
+ * and grouped by the other person.
+ */
+export function getPersonalLedger(
+  identityName: string,
+  groups: Group[],
+  roster: Member[],
+  expenses: GroupExpense[],
+  settlements: Settlement[],
+): PersonalLedgerEntry[] {
+  const byPerson = new Map<string, PersonalLedgerEntry>();
+
+  getGroupsForIdentity(groups, roster, identityName).forEach((group) => {
+    const member = getMemberInGroup(group, roster, identityName);
+    if (!member) return;
+
+    const groupMembers = resolveGroupMembers(group, roster);
+    const groupExpenses = expenses.filter((e) => e.groupId === group.id);
+    const groupSettlements = settlements.filter((s) => s.groupId === group.id);
+    const transfers = computeDirectTransfers(groupMembers, groupExpenses, groupSettlements);
+
+    transfers.forEach((t) => {
+      if (t.fromMemberId !== member.id && t.toMemberId !== member.id) return;
+      const youOwe = t.fromMemberId === member.id;
+      const otherId = youOwe ? t.toMemberId : t.fromMemberId;
+      const otherName = roster.find((m) => m.id === otherId)?.name ?? '未知成員';
+
+      const entry = byPerson.get(otherName) ?? { otherName, net: 0, entries: [] };
+      entry.net += youOwe ? -t.amount : t.amount;
+      entry.entries.push({
+        group,
+        amount: t.amount,
+        youOwe,
+        fromMemberId: t.fromMemberId,
+        toMemberId: t.toMemberId,
+      });
+      byPerson.set(otherName, entry);
+    });
+  });
+
+  return Array.from(byPerson.values()).sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
 }
 
 export function getIdentityTotalBalance(

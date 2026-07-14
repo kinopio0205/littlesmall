@@ -11,6 +11,7 @@ import Logo from './Logo';
 const navItems = [
   { to: '/', label: '總覽', icon: '🏠', end: true },
   { to: '/records', label: '我的紀錄', icon: '📝' },
+  { to: '/balances', label: '餘額', icon: '⚖️' },
   { to: '/reports', label: '報表', icon: '📊' },
   { to: '/groups', label: '分帳群組', icon: '🤝' },
 ];
