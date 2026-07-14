@@ -1,20 +1,38 @@
 import { useState } from 'react';
 import { useSyncStore } from '../store/syncStore';
-import { generateSyncCode, normalizeSyncCode } from '../utils/syncCode';
+import { useIdentityStore } from '../store/identityStore';
+import { useLastSpaceStore } from '../store/lastSpaceStore';
+import { generateSyncCode, normalizeSyncCode, buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
 
 export default function SyncGate() {
   const setCode = useSyncStore((s) => s.setCode);
+  const setIdentity = useIdentityStore((s) => s.setIdentity);
+  const lastSpace = useLastSpaceStore((s) => s.lastSpace);
   const [mode, setMode] = useState<'choose' | 'create' | 'join'>('choose');
   const [newCode] = useState(() => generateSyncCode());
   const [joinInput, setJoinInput] = useState('');
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   function copyCode() {
     navigator.clipboard.writeText(newCode).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
+  }
+
+  function copyInviteLink() {
+    navigator.clipboard.writeText(buildInviteUrl(newCode)).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    });
+  }
+
+  function returnToLastSpace() {
+    if (!lastSpace) return;
+    setCode(lastSpace.code);
+    setIdentity(lastSpace.identity);
   }
 
   function join(e: React.FormEvent) {
@@ -38,6 +56,17 @@ export default function SyncGate() {
 
         {mode === 'choose' && (
           <div className="flex flex-col gap-3">
+            {lastSpace && (
+              <button
+                onClick={returnToLastSpace}
+                className="w-full py-3 rounded-lg border border-cyan-400/40 bg-cyan-500/10 text-cyan-300 font-medium hover:bg-cyan-500/20 flex items-center justify-center gap-2"
+              >
+                <span>↩</span>
+                <span>
+                  返回上一個空間（{lastSpace.identity} · <span className="font-mono">{lastSpace.code}</span>）
+                </span>
+              </button>
+            )}
             <button
               onClick={() => setMode('create')}
               className="w-full py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-medium hover:from-cyan-400 hover:to-violet-500"
@@ -68,8 +97,15 @@ export default function SyncGate() {
                   {copied ? '已複製' : '複製'}
                 </button>
               </div>
+              <button
+                onClick={copyInviteLink}
+                className="w-full mt-2 flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg border border-slate-700 text-slate-300 hover:border-cyan-400/50 hover:text-cyan-300"
+              >
+                <span>🔗</span>
+                <span>{linkCopied ? '邀請網址已複製' : '複製邀請網址'}</span>
+              </button>
               <p className="text-xs text-slate-500 mt-2">
-                把這組代碼分享給要一起分帳的朋友，他們在「加入現有的分帳空間」輸入同樣的代碼即可同步。請先保存好這組代碼，之後要在其他裝置使用需要它。
+                把代碼或邀請網址分享給要一起分帳的朋友——網址開啟後會自動加入這個空間，不用手動輸入代碼。請先保存好這組代碼，之後要在其他裝置使用需要它。
               </p>
             </div>
             <button

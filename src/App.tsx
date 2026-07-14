@@ -11,13 +11,30 @@ import GroupDetail from './pages/GroupDetail';
 import { useIdentityStore } from './store/identityStore';
 import { useSyncStore } from './store/syncStore';
 import { connectSync, disconnectSync } from './sync/firestoreSync';
+import { normalizeSyncCode } from './utils/syncCode';
 
 export default function App() {
   const identity = useIdentityStore((s) => s.name);
   const code = useSyncStore((s) => s.code);
+  const setCode = useSyncStore((s) => s.setCode);
   const clearCode = useSyncStore((s) => s.clearCode);
   const [syncReady, setSyncReady] = useState(false);
   const [syncError, setSyncError] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const invited = params.get('code');
+    if (invited && !useSyncStore.getState().code) {
+      const normalized = normalizeSyncCode(invited);
+      if (normalized.length >= 4) setCode(normalized);
+    }
+    if (invited) {
+      params.delete('code');
+      const query = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!code) return;

@@ -3,6 +3,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 import clsx from 'clsx';
 import { useIdentityStore } from '../store/identityStore';
 import { useSyncStore } from '../store/syncStore';
+import { useLastSpaceStore } from '../store/lastSpaceStore';
+import { buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
 
 const navItems = [
@@ -17,7 +19,9 @@ export default function Layout() {
   const clearIdentity = useIdentityStore((s) => s.clearIdentity);
   const code = useSyncStore((s) => s.code);
   const clearCode = useSyncStore((s) => s.clearCode);
+  const setLastSpace = useLastSpaceStore((s) => s.setLastSpace);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   function copyCode() {
     if (!code) return;
@@ -25,6 +29,23 @@ export default function Layout() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
+  }
+
+  function copyInviteLink() {
+    if (!code) return;
+    navigator.clipboard.writeText(buildInviteUrl(code)).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 1500);
+    });
+  }
+
+  function switchSpace() {
+    if (!code || !identity) return;
+    if (confirm(`切換分帳空間？目前同步碼為「${code}」，切換後需要重新輸入同步碼與身分。`)) {
+      setLastSpace({ code, identity });
+      clearIdentity();
+      clearCode();
+    }
   }
 
   return (
@@ -38,15 +59,10 @@ export default function Layout() {
             </span>
           </div>
           <div className="flex items-center gap-2 overflow-x-auto">
-            <div className="flex items-center rounded-full border border-slate-700 bg-slate-800/60 pl-3 pr-1 py-1 gap-1.5 whitespace-nowrap">
+            <div className="flex items-center rounded-full border border-slate-700 bg-slate-800/60 pl-3 pr-1 py-1 gap-1 whitespace-nowrap">
               <span className="text-cyan-400 text-xs">◈</span>
               <button
-                onClick={() => {
-                  if (confirm(`切換分帳空間？目前同步碼為「${code}」，切換後需要重新輸入同步碼與身分。`)) {
-                    clearIdentity();
-                    clearCode();
-                  }
-                }}
+                onClick={switchSpace}
                 className="font-mono text-xs text-slate-300 hover:text-cyan-300"
                 title="切換分帳空間"
               >
@@ -59,6 +75,14 @@ export default function Layout() {
                 aria-label="複製同步碼"
               >
                 {copied ? '✓' : '⧉'}
+              </button>
+              <button
+                onClick={copyInviteLink}
+                className="text-xs text-slate-400 hover:text-cyan-300 rounded-full w-6 h-6 flex items-center justify-center hover:bg-slate-700/60"
+                title="複製邀請網址"
+                aria-label="複製邀請網址"
+              >
+                {linkCopied ? '✓' : '🔗'}
               </button>
             </div>
             <button

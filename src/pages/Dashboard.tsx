@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useGroupStore } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
 import { getIdentityExpenseLines, getIdentityGroupBalances } from '../utils/identity';
+import { computeDirectTransfers } from '../utils/debt';
 import { formatCurrency, formatDate } from '../utils/format';
 import Modal from '../components/Modal';
 
@@ -27,6 +28,20 @@ export default function Dashboard() {
     [identity, groups, roster, expenses],
   );
 
+  const myId = roster.find((m) => m.name === identity)?.id;
+  const personalTransfers = useMemo(() => {
+    if (!myId) return [];
+    return computeDirectTransfers(roster, expenses, settlements)
+      .filter((t) => t.fromMemberId === myId || t.toMemberId === myId)
+      .map((t) => {
+        const otherId = t.fromMemberId === myId ? t.toMemberId : t.fromMemberId;
+        const otherName = roster.find((m) => m.id === otherId)?.name ?? '未知成員';
+        const youOwe = t.fromMemberId === myId;
+        return { otherName, amount: t.amount, youOwe };
+      })
+      .sort((a, b) => b.amount - a.amount);
+  }, [myId, roster, expenses, settlements]);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -49,6 +64,28 @@ export default function Dashboard() {
             {formatCurrency(totalReceivable - totalPayable)}
           </div>
         </div>
+      </div>
+
+      <div>
+        <div className="font-medium text-slate-100 mb-2">跟大家的餘額（跨群組整合）</div>
+        {personalTransfers.length === 0 ? (
+          <div className="text-sm text-slate-500 py-6 text-center bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl">
+            目前跟大家都已結清 🎉
+          </div>
+        ) : (
+          <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl divide-y divide-slate-800">
+            {personalTransfers.map((t, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3">
+                <div className="text-sm text-slate-300">
+                  {t.youOwe ? `你 → ${t.otherName}` : `${t.otherName} → 你`}
+                </div>
+                <span className={`text-sm font-medium ${t.youOwe ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {t.youOwe ? `應付 ${formatCurrency(t.amount)}` : `應收 ${formatCurrency(t.amount)}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl overflow-hidden">
