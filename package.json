@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:emulator": "vite --mode emulator",
+    "emulator": "npx -y firebase-tools@14 emulators:start --only firestore --project demo-ledger-test",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "npx -y firebase-tools@14 emulators:exec --only firestore --project demo-ledger-test \"vitest run\"",
