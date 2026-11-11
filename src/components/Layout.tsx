@@ -3,7 +3,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 import clsx from 'clsx';
 import { useIdentityStore } from '../store/identityStore';
 import { useSyncStore } from '../store/syncStore';
-import { useLastSpaceStore } from '../store/lastSpaceStore';
+import { useRecentSpacesStore } from '../store/lastSpaceStore';
+import { useMyMember } from '../hooks/useMyMember';
 import { usePendingInviteStore } from '../store/pendingInviteStore';
 import { buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
@@ -17,12 +18,12 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const identity = useIdentityStore((s) => s.name);
-  const clearIdentity = useIdentityStore((s) => s.clearIdentity);
+  const myMember = useMyMember();
+  const clearMember = useIdentityStore((s) => s.clearMember);
   const code = useSyncStore((s) => s.code);
   const setCode = useSyncStore((s) => s.setCode);
   const clearCode = useSyncStore((s) => s.clearCode);
-  const setLastSpace = useLastSpaceStore((s) => s.setLastSpace);
+  const rememberSpace = useRecentSpacesStore((s) => s.rememberSpace);
   const pendingCode = usePendingInviteStore((s) => s.pendingCode);
   const clearPendingInvite = usePendingInviteStore((s) => s.clearPending);
   const [copied, setCopied] = useState(false);
@@ -45,18 +46,17 @@ export default function Layout() {
   }
 
   function switchSpace() {
-    if (!code || !identity) return;
-    if (confirm(`切換分帳空間？目前同步碼為「${code}」，切換後需要重新輸入同步碼與身分。`)) {
-      setLastSpace({ code, identity });
-      clearIdentity();
+    if (!code) return;
+    if (confirm(`切換分帳空間？目前同步碼為「${code}」，切換後需要重新輸入同步碼。`)) {
+      rememberSpace(code, myMember?.name);
       clearCode();
     }
   }
 
   function acceptInvite() {
     if (!pendingCode) return;
-    if (code && identity) setLastSpace({ code, identity });
-    clearIdentity();
+    // 身分依空間記在 identityStore.byCode，切換空間不需要清除；回來時會自動沿用。
+    if (code) rememberSpace(code, myMember?.name);
     setCode(pendingCode);
     clearPendingInvite();
   }
@@ -100,12 +100,12 @@ export default function Layout() {
             </div>
             <button
               onClick={() => {
-                if (confirm(`切換身分？目前身分為「${identity}」。`)) clearIdentity();
+                if (code && confirm(`切換身分？目前身分為「${myMember?.name}」。`)) clearMember(code);
               }}
               className="flex items-center gap-1.5 text-xs text-slate-300 border border-slate-700 bg-slate-800/60 rounded-full px-3 py-1.5 hover:border-cyan-400/50 hover:text-cyan-300 whitespace-nowrap"
             >
               <span>👤</span>
-              <span>{identity}</span>
+              <span>{myMember?.name}</span>
               <span className="text-slate-500">切換</span>
             </button>
           </div>

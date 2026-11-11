@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances, resolveGroupMembers } from '../store/groupStore';
-import { useIdentityStore } from '../store/identityStore';
+import { useMyMember } from '../hooks/useMyMember';
 import Modal from '../components/Modal';
 import { formatCurrency } from '../utils/format';
 
@@ -13,7 +13,7 @@ export default function Groups() {
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
   const addGroup = useGroupStore((s) => s.addGroup);
-  const identity = useIdentityStore((s) => s.name) ?? '';
+  const identity = useMyMember()?.name ?? '';
   const navigate = useNavigate();
 
   const [showCreate, setShowCreate] = useState(false);

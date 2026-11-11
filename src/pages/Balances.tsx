@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupStore } from '../store/groupStore';
-import { useIdentityStore } from '../store/identityStore';
+import { useMyMember } from '../hooks/useMyMember';
 import { getPersonalLedger } from '../utils/identity';
 import { formatCurrency } from '../utils/format';
 
 export default function Balances() {
-  const identity = useIdentityStore((s) => s.name)!;
+  const myId = useMyMember()!.id;
   const groups = useGroupStore((s) => s.groups);
   const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
@@ -14,8 +14,8 @@ export default function Balances() {
   const navigate = useNavigate();
 
   const ledger = useMemo(
-    () => getPersonalLedger(identity, groups, roster, expenses, settlements),
-    [identity, groups, roster, expenses, settlements],
+    () => getPersonalLedger(myId, groups, roster, expenses, settlements),
+    [myId, groups, roster, expenses, settlements],
   );
 
   return (

@@ -2,19 +2,13 @@ import type { Group, GroupExpense, Member, Settlement } from '../types';
 import { computeGroupBalances, resolveGroupMembers } from '../store/groupStore';
 import { computeDirectTransfers } from './debt';
 
-export function getAllMemberNames(roster: Member[]): string[] {
-  return [...roster]
-    .map((m) => m.name)
-    .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
-}
-
-export function getMemberInGroup(group: Group, roster: Member[], identityName: string) {
-  const member = roster.find((m) => m.name === identityName);
+export function getMemberInGroup(group: Group, roster: Member[], memberId: string) {
+  const member = roster.find((m) => m.id === memberId);
   return member && group.memberIds.includes(member.id) ? member : undefined;
 }
 
-export function getGroupsForIdentity(groups: Group[], roster: Member[], identityName: string): Group[] {
-  return groups.filter((g) => getMemberInGroup(g, roster, identityName));
+export function getGroupsForIdentity(groups: Group[], roster: Member[], memberId: string): Group[] {
+  return groups.filter((g) => getMemberInGroup(g, roster, memberId));
 }
 
 export interface IdentityExpenseLine {
@@ -27,14 +21,14 @@ export interface IdentityExpenseLine {
 
 /** All expense line items across groups that involve this identity, newest first. */
 export function getIdentityExpenseLines(
-  identityName: string,
+  memberId: string,
   groups: Group[],
   roster: Member[],
   expenses: GroupExpense[],
 ): IdentityExpenseLine[] {
   const lines: IdentityExpenseLine[] = [];
   groups.forEach((g) => {
-    const member = getMemberInGroup(g, roster, identityName);
+    const member = getMemberInGroup(g, roster, memberId);
     if (!member) return;
     expenses
       .filter((e) => e.groupId === g.id)
@@ -56,14 +50,14 @@ export function getIdentityExpenseLines(
 
 /** This identity's net balance (positive = should receive) within each group they belong to. */
 export function getIdentityGroupBalances(
-  identityName: string,
+  memberId: string,
   groups: Group[],
   roster: Member[],
   expenses: GroupExpense[],
   settlements: Settlement[],
 ): { group: Group; balance: number }[] {
-  return getGroupsForIdentity(groups, roster, identityName).map((g) => {
-    const member = getMemberInGroup(g, roster, identityName)!;
+  return getGroupsForIdentity(groups, roster, memberId).map((g) => {
+    const member = getMemberInGroup(g, roster, memberId)!;
     const groupMembers = resolveGroupMembers(g, roster);
     const balances = computeGroupBalances(g.id, groupMembers, expenses, settlements);
     return { group: g, balance: balances[member.id] ?? 0 };
@@ -92,7 +86,7 @@ export interface PersonalLedgerEntry {
  * and grouped by the other person.
  */
 export function getPersonalLedger(
-  identityName: string,
+  memberId: string,
   groups: Group[],
   roster: Member[],
   expenses: GroupExpense[],
@@ -100,8 +94,8 @@ export function getPersonalLedger(
 ): PersonalLedgerEntry[] {
   const byPerson = new Map<string, PersonalLedgerEntry>();
 
-  getGroupsForIdentity(groups, roster, identityName).forEach((group) => {
-    const member = getMemberInGroup(group, roster, identityName);
+  getGroupsForIdentity(groups, roster, memberId).forEach((group) => {
+    const member = getMemberInGroup(group, roster, memberId);
     if (!member) return;
 
     const groupMembers = resolveGroupMembers(group, roster);
@@ -132,13 +126,13 @@ export function getPersonalLedger(
 }
 
 export function getIdentityTotalBalance(
-  identityName: string,
+  memberId: string,
   groups: Group[],
   roster: Member[],
   expenses: GroupExpense[],
   settlements: Settlement[],
 ): number {
-  return getIdentityGroupBalances(identityName, groups, roster, expenses, settlements).reduce(
+  return getIdentityGroupBalances(memberId, groups, roster, expenses, settlements).reduce(
     (sum, g) => sum + g.balance,
     0,
   );

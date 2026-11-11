@@ -1,19 +1,61 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface IdentityState {
-  name: string | null;
-  setIdentity: (name: string) => void;
-  clearIdentity: () => void;
+/** 寫入 localStorage 的部分。 */
+export interface IdentityPersisted {
+  /** 每個同步空間各自記住「我是哪個成員」：syncCode → memberId。 */
+  byCode: Record<string, string>;
+  /**
+   * 舊版（v0）只存一個全域名字字串。升級後先留著，等第一次連上空間、
+   * 名單載入後再換成該空間的 memberId（見 utils/identityMigration.ts）。
+   */
+  legacyName: string | null;
+}
+
+interface IdentityState extends IdentityPersisted {
+  setMember: (code: string, memberId: string) => void;
+  clearMember: (code: string) => void;
+  clearLegacyName: () => void;
+}
+
+export function migrateIdentity(persisted: unknown, version: number): IdentityPersisted {
+  const p = (persisted ?? {}) as Record<string, unknown>;
+  if (version < 1) {
+    const name = typeof p.name === 'string' ? p.name.trim() : '';
+    return { byCode: {}, legacyName: name || null };
+  }
+  return {
+    byCode: (p.byCode as Record<string, string> | undefined) ?? {},
+    legacyName: typeof p.legacyName === 'string' ? p.legacyName : null,
+  };
 }
 
 export const useIdentityStore = create<IdentityState>()(
   persist(
     (set) => ({
-      name: null,
-      setIdentity: (name) => set({ name: name.trim() }),
-      clearIdentity: () => set({ name: null }),
+      byCode: {},
+      legacyName: null,
+      setMember: (code, memberId) => set((s) => ({ byCode: { ...s.byCode, [code]: memberId } })),
+      clearMember: (code) =>
+        set((s) => {
+          const byCode = { ...s.byCode };
+          delete byCode[code];
+          return { byCode };
+        }),
+      clearLegacyName: () => set({ legacyName: null }),
     }),
-    { name: 'ledger-identity' },
+    {
+      name: 'ledger-identity',
+      version: 1,
+      migrate: migrateIdentity,
+      partialize: (s): IdentityPersisted => ({ byCode: s.byCode, legacyName: s.legacyName }),
+    },
   ),
 );
+
+// 多個分頁同時開著時，persist 每次都整份寫回；先同步其他分頁的變更，避免用舊的 byCode 蓋掉別的空間的身分。
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ledger-identity') void useIdentityStore.persist.rehydrate();
+  });
+}

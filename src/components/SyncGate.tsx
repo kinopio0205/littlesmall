@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { useSyncStore } from '../store/syncStore';
-import { useIdentityStore } from '../store/identityStore';
-import { useLastSpaceStore } from '../store/lastSpaceStore';
+import { useRecentSpacesStore } from '../store/lastSpaceStore';
 import { generateSyncCode, normalizeSyncCode, buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
 
 export default function SyncGate() {
   const setCode = useSyncStore((s) => s.setCode);
-  const setIdentity = useIdentityStore((s) => s.setIdentity);
-  const lastSpace = useLastSpaceStore((s) => s.lastSpace);
+  const lastSpace = useRecentSpacesStore((s) => s.recentSpaces[0]);
   const [mode, setMode] = useState<'choose' | 'create' | 'join'>('choose');
   const [newCode] = useState(() => generateSyncCode());
   const [joinInput, setJoinInput] = useState('');
@@ -32,7 +30,6 @@ export default function SyncGate() {
   function returnToLastSpace() {
     if (!lastSpace) return;
     setCode(lastSpace.code);
-    setIdentity(lastSpace.identity);
   }
 
   function join(e: React.FormEvent) {
@@ -63,7 +60,7 @@ export default function SyncGate() {
               >
                 <span>↩</span>
                 <span>
-                  返回上一個空間（{lastSpace.identity} · <span className="font-mono">{lastSpace.code}</span>）
+                  返回上一個空間（{lastSpace.memberName ? `${lastSpace.memberName} · ` : ''}<span className="font-mono">{lastSpace.code}</span>）
                 </span>
               </button>
             )}

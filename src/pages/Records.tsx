@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGroupStore } from '../store/groupStore';
-import { useIdentityStore } from '../store/identityStore';
+import { useMyMember } from '../hooks/useMyMember';
 import { getIdentityExpenseLines, getGroupsForIdentity, type IdentityExpenseLine } from '../utils/identity';
 import { formatCurrency, formatDate } from '../utils/format';
 
 export default function Records() {
-  const identity = useIdentityStore((s) => s.name)!;
+  const myId = useMyMember()!.id;
   const groups = useGroupStore((s) => s.groups);
   const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
@@ -15,11 +15,11 @@ export default function Records() {
   const [groupFilter, setGroupFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  const myGroups = useMemo(() => getGroupsForIdentity(groups, roster, identity), [groups, roster, identity]);
+  const myGroups = useMemo(() => getGroupsForIdentity(groups, roster, myId), [groups, roster, myId]);
 
   const allLines = useMemo(
-    () => getIdentityExpenseLines(identity, groups, roster, expenses),
-    [identity, groups, roster, expenses],
+    () => getIdentityExpenseLines(myId, groups, roster, expenses),
+    [myId, groups, roster, expenses],
   );
 
   const filtered = useMemo(() => {

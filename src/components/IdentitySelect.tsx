@@ -1,18 +1,31 @@
 import { useState } from 'react';
 import { useGroupStore } from '../store/groupStore';
 import { useIdentityStore } from '../store/identityStore';
-import { getAllMemberNames } from '../utils/identity';
+import { useSyncStore } from '../store/syncStore';
 import Logo from './Logo';
 
 export default function IdentitySelect() {
   const roster = useGroupStore((s) => s.members);
-  const setIdentity = useIdentityStore((s) => s.setIdentity);
+  const addRosterMemberStrict = useGroupStore((s) => s.addRosterMemberStrict);
+  const code = useSyncStore((s) => s.code);
+  const setMember = useIdentityStore((s) => s.setMember);
   const [name, setName] = useState('');
+  const [error, setError] = useState('');
 
-  const knownNames = getAllMemberNames(roster);
+  const knownMembers = [...roster].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
 
-  function confirm(n: string) {
-    if (n.trim()) setIdentity(n.trim());
+  function choose(memberId: string) {
+    if (code) setMember(code, memberId);
+  }
+
+  function joinAsNew(n: string) {
+    if (!code || !n.trim()) return;
+    const id = addRosterMemberStrict(n);
+    if (!id) {
+      setError(`「${n.trim()}」已經在名單上，如果是你，請直接點上方的名字。`);
+      return;
+    }
+    setMember(code, id);
   }
 
   return (
@@ -28,17 +41,17 @@ export default function IdentitySelect() {
           <p className="text-sm text-slate-500 mt-1">請選擇你的身分，開始分帳</p>
         </div>
 
-        {knownNames.length > 0 && (
+        {knownMembers.length > 0 && (
           <div className="mb-4">
             <div className="text-xs text-slate-500 mb-2">選擇已知成員</div>
             <div className="flex flex-wrap gap-2">
-              {knownNames.map((n) => (
+              {knownMembers.map((m) => (
                 <button
-                  key={n}
-                  onClick={() => confirm(n)}
+                  key={m.id}
+                  onClick={() => choose(m.id)}
                   className="px-3 py-1.5 rounded-full border border-slate-700 bg-slate-800/60 text-sm text-slate-300 hover:border-cyan-400/60 hover:text-cyan-300"
                 >
-                  {n}
+                  {m.name}
                 </button>
               ))}
             </div>
@@ -48,20 +61,24 @@ export default function IdentitySelect() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            confirm(name);
+            joinAsNew(name);
           }}
           className="flex flex-col gap-3"
         >
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">或輸入新的暱稱</label>
+            <label className="text-xs text-slate-500 mb-1 block">或以新成員加入</label>
             <input
               autoFocus
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value);
+                setError('');
+              }}
               placeholder="你的暱稱"
               className="w-full border border-slate-700 bg-slate-800/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-400/60"
             />
+            {error && <p className="text-xs text-rose-400 mt-1.5">{error}</p>}
           </div>
           <button
             type="submit"

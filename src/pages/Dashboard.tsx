@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGroupStore } from '../store/groupStore';
-import { useIdentityStore } from '../store/identityStore';
+import { useMyMember } from '../hooks/useMyMember';
 import { getIdentityExpenseLines, getIdentityGroupBalances } from '../utils/identity';
 import { formatCurrency, formatDate } from '../utils/format';
 import Modal from '../components/Modal';
 
 export default function Dashboard() {
-  const identity = useIdentityStore((s) => s.name)!;
+  const me = useMyMember()!;
+  const myId = me.id;
   const groups = useGroupStore((s) => s.groups);
   const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
@@ -16,21 +17,21 @@ export default function Dashboard() {
   const [showGroupPicker, setShowGroupPicker] = useState(false);
 
   const groupBalances = useMemo(
-    () => getIdentityGroupBalances(identity, groups, roster, expenses, settlements),
-    [identity, groups, roster, expenses, settlements],
+    () => getIdentityGroupBalances(myId, groups, roster, expenses, settlements),
+    [myId, groups, roster, expenses, settlements],
   );
   const totalReceivable = groupBalances.reduce((s, g) => s + Math.max(g.balance, 0), 0);
   const totalPayable = groupBalances.reduce((s, g) => s + Math.max(-g.balance, 0), 0);
 
   const lines = useMemo(
-    () => getIdentityExpenseLines(identity, groups, roster, expenses).slice(0, 6),
-    [identity, groups, roster, expenses],
+    () => getIdentityExpenseLines(myId, groups, roster, expenses).slice(0, 6),
+    [myId, groups, roster, expenses],
   );
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-100">哈囉，{identity} 👋</h1>
+        <h1 className="text-xl font-semibold text-slate-100">哈囉，{me.name} 👋</h1>
         <p className="text-sm text-slate-500 mt-0.5">這是你目前的分帳狀況</p>
       </div>
 

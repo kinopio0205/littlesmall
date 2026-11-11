@@ -9,6 +9,8 @@ interface GroupState {
   settlements: Settlement[];
 
   addRosterMember: (name: string) => string;
+  /** 以新成員身分加入：同名或空白時回傳 null，不會把人對應到既有的同名成員。 */
+  addRosterMemberStrict: (name: string) => string | null;
 
   addGroup: (name: string, icon: string, memberNames: string[]) => string;
   updateGroup: (id: string, name: string, icon: string) => void;
@@ -36,6 +38,14 @@ export const useGroupStore = create<GroupState>()((set, get) => ({
     const trimmed = name.trim();
     const existing = get().members.find((m) => m.name === trimmed);
     if (existing) return existing.id;
+    const id = uuid();
+    set((state) => ({ members: [...state.members, { id, name: trimmed }] }));
+    return id;
+  },
+
+  addRosterMemberStrict: (name) => {
+    const trimmed = name.trim();
+    if (!trimmed || get().members.some((m) => m.name === trimmed)) return null;
     const id = uuid();
     set((state) => ({ members: [...state.members, { id, name: trimmed }] }));
     return id;

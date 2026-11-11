@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGroupStore, computeGroupBalances, resolveGroupMembers } from '../store/groupStore';
-import { useIdentityStore } from '../store/identityStore';
+import { useMyMember } from '../hooks/useMyMember';
 import { computeDirectTransfers } from '../utils/debt';
 import { formatCurrency, formatDate } from '../utils/format';
 import ExpenseModal from '../components/ExpenseModal';
@@ -14,7 +14,7 @@ export default function GroupDetail() {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const identity = useIdentityStore((s) => s.name);
+  const myId = useMyMember()?.id;
   const groups = useGroupStore((s) => s.groups);
   const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
@@ -98,7 +98,7 @@ export default function GroupDetail() {
   function memberName(id: string) {
     const name = groupMembers.find((m) => m.id === id)?.name;
     if (!name) return '未知成員';
-    return name === identity ? '你' : name;
+    return id === myId ? '你' : name;
   }
 
   function openSettle(from?: string, to?: string, amount?: number) {
@@ -195,7 +195,7 @@ export default function GroupDetail() {
           <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-xl divide-y divide-slate-800">
             {groupMembers.map((m) => {
               const bal = balances[m.id] ?? 0;
-              const isMe = m.name === identity;
+              const isMe = m.id === myId;
               return (
                 <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-cyan-500/5' : ''}`}>
                   <span className={`text-sm ${isMe ? 'font-semibold text-cyan-300' : 'text-slate-300'}`}>
@@ -283,7 +283,7 @@ export default function GroupDetail() {
             {groupMembers.map((m) => {
               const bal = balances[m.id] ?? 0;
               const canRemove = Math.abs(bal) < 0.01;
-              const isMe = m.name === identity;
+              const isMe = m.id === myId;
               return (
                 <div key={m.id} className={`flex items-center justify-between px-4 py-3 ${isMe ? 'bg-cyan-500/5' : ''}`}>
                   <span className={`text-sm ${isMe ? 'font-semibold text-cyan-300' : 'text-slate-300'}`}>

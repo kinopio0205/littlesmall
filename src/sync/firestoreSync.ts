@@ -6,7 +6,6 @@ import {
   type DocumentData,
   type DocumentReference,
 } from 'firebase/firestore';
-import { v4 as uuid } from 'uuid';
 import { db } from '../firebase';
 import { useGroupStore } from '../store/groupStore';
 import type { Group, GroupExpense, Member, Settlement } from '../types';
@@ -41,7 +40,7 @@ function toLedgerDoc(state: LedgerDoc): LedgerDoc {
  * every expense/settlement memberId to point at the new roster ids, so
  * existing synced data keeps working after the roster migration.
  */
-function migrateLedgerDoc(raw: DocumentData): { doc: LedgerDoc; migrated: boolean } {
+export function migrateLedgerDoc(raw: DocumentData): { doc: LedgerDoc; migrated: boolean } {
   const rawGroups: LegacyGroup[] = raw?.groups ?? [];
   const hasLegacyShape = rawGroups.some((g) => Array.isArray(g.members));
 
@@ -64,7 +63,9 @@ function migrateLedgerDoc(raw: DocumentData): { doc: LedgerDoc; migrated: boolea
   function rosterIdFor(name: string): string {
     const existing = rosterIdByName.get(name);
     if (existing) return existing;
-    const id = uuid();
+    // 由名字決定 id：多台裝置同時遷移同一份舊資料時會得到相同的 id，
+    // 誰的寫入勝出都不會讓已記下的 memberId 失效。
+    const id = `legacy:${encodeURIComponent(name)}`;
     rosterIdByName.set(name, id);
     roster.push({ id, name });
     return id;

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useGroupStore } from '../store/groupStore';
-import { useIdentityStore } from '../store/identityStore';
+import { useMyMember } from '../hooks/useMyMember';
 import { getIdentityExpenseLines } from '../utils/identity';
 import { formatCurrency, todayISO } from '../utils/format';
 import {
@@ -27,15 +27,15 @@ const TOOLTIP_STYLE = {
 };
 
 export default function Reports() {
-  const identity = useIdentityStore((s) => s.name)!;
+  const myId = useMyMember()!.id;
   const groups = useGroupStore((s) => s.groups);
   const roster = useGroupStore((s) => s.members);
   const expenses = useGroupStore((s) => s.expenses);
   const [month, setMonth] = useState(todayISO().slice(0, 7));
 
   const allLines = useMemo(
-    () => getIdentityExpenseLines(identity, groups, roster, expenses),
-    [identity, groups, roster, expenses],
+    () => getIdentityExpenseLines(myId, groups, roster, expenses),
+    [myId, groups, roster, expenses],
   );
 
   const monthLines = useMemo(() => allLines.filter((l) => l.expense.date.startsWith(month)), [allLines, month]);

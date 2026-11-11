@@ -9,14 +9,15 @@ import Reports from './pages/Reports';
 import Balances from './pages/Balances';
 import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
-import { useIdentityStore } from './store/identityStore';
+import { useMyMember } from './hooks/useMyMember';
+import { applyLegacyIdentityMigration } from './utils/identityMigration';
 import { useSyncStore } from './store/syncStore';
 import { usePendingInviteStore } from './store/pendingInviteStore';
 import { connectSync, disconnectSync } from './sync/firestoreSync';
 import { normalizeSyncCode } from './utils/syncCode';
 
 export default function App() {
-  const identity = useIdentityStore((s) => s.name);
+  const myMember = useMyMember();
   const code = useSyncStore((s) => s.code);
   const setCode = useSyncStore((s) => s.setCode);
   const clearCode = useSyncStore((s) => s.clearCode);
@@ -65,7 +66,11 @@ export default function App() {
     setSyncError('');
     connectSync(
       code,
-      () => setSyncReady(true),
+      () => {
+        // 名單已載入：先把舊版的名字身分換成這個空間的 memberId，再決定要不要顯示身分選擇。
+        applyLegacyIdentityMigration(code);
+        setSyncReady(true);
+      },
       (message) => setSyncError(message),
     );
     return () => disconnectSync();
@@ -106,7 +111,7 @@ export default function App() {
     );
   }
 
-  if (!identity) return <IdentitySelect />;
+  if (!myMember) return <IdentitySelect />;
 
   return (
     <Routes>

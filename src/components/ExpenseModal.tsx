@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import { useGroupStore, buildSplits } from '../store/groupStore';
-import { useIdentityStore } from '../store/identityStore';
+import { useMyMember } from '../hooks/useMyMember';
 import { todayISO, formatCurrency } from '../utils/format';
 import type { GroupExpense, Group, Member, SplitType } from '../types';
 
@@ -18,12 +18,12 @@ export default function ExpenseModal({ group, members, onClose, editing }: Props
   const addExpense = useGroupStore((s) => s.addExpense);
   const updateExpense = useGroupStore((s) => s.updateExpense);
   const deleteExpense = useGroupStore((s) => s.deleteExpense);
-  const identity = useIdentityStore((s) => s.name);
+  const myId = useMyMember()?.id;
 
   const [description, setDescription] = useState(editing?.description ?? '');
   const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
   const [payerId, setPayerId] = useState(
-    editing?.payerId ?? members.find((m) => m.name === identity)?.id ?? members[0]?.id ?? '',
+    editing?.payerId ?? members.find((m) => m.id === myId)?.id ?? members[0]?.id ?? '',
   );
   const [date, setDate] = useState(editing?.date ?? todayISO());
   const [icon, setIcon] = useState(editing?.icon ?? ICONS[0]);
