@@ -14,7 +14,16 @@ export default function Dashboard() {
   const expenses = useGroupStore((s) => s.expenses);
   const settlements = useGroupStore((s) => s.settlements);
   const navigate = useNavigate();
+  const addGroupMember = useGroupStore((s) => s.addGroupMember);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
+
+  /** 先選群組再記帳：目前身分不在該群組時，自動加入後再開啟新增支出。 */
+  function recordInGroup(groupId: string) {
+    const group = groups.find((g) => g.id === groupId);
+    if (group && !group.memberIds.includes(myId)) addGroupMember(groupId, myId);
+    setShowGroupPicker(false);
+    navigate(`/groups/${groupId}?add=1`);
+  }
 
   const groupBalances = useMemo(
     () => getIdentityGroupBalances(myId, groups, roster, expenses, settlements),
@@ -137,7 +146,7 @@ export default function Dashboard() {
       </div>
 
       <button
-        onClick={() => (groups.length === 1 ? navigate(`/groups/${groups[0].id}?add=1`) : setShowGroupPicker(true))}
+        onClick={() => setShowGroupPicker(true)}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 text-white text-2xl shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-violet-500 flex items-center justify-center"
         aria-label="新增支出"
       >
@@ -155,16 +164,24 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {groups.map((g) => (
-                <button
-                  key={g.id}
-                  onClick={() => navigate(`/groups/${g.id}?add=1`)}
-                  className="flex items-center gap-2.5 border border-slate-800 rounded-lg px-3 py-2.5 hover:border-cyan-400/50 text-left"
-                >
-                  <span className="text-xl">{g.icon}</span>
-                  <span className="text-sm text-slate-300">{g.name}</span>
-                </button>
-              ))}
+              {groups.map((g) => {
+                const isMember = g.memberIds.includes(myId);
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => recordInGroup(g.id)}
+                    className="flex items-center gap-2.5 border border-slate-800 rounded-lg px-3 py-2.5 hover:border-cyan-400/50 text-left"
+                  >
+                    <span className="text-xl">{g.icon}</span>
+                    <span className="flex flex-col">
+                      <span className="text-sm text-slate-300">{g.name}</span>
+                      {!isMember && (
+                        <span className="text-[11px] text-amber-300/80">你不在此群組，記帳時會自動以「{me.name}」加入</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </Modal>

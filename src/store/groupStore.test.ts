@@ -33,3 +33,17 @@ describe('ensureRosterMember', () => {
     expect(useGroupStore.getState().members).toEqual([{ id: 'm1', name: '小明' }]);
   });
 });
+
+describe('addGroupMember（記帳前自動加入群組）', () => {
+  it('不在群組時加入，已在群組時不重複', () => {
+    useGroupStore.setState({
+      members: [{ id: 'm1', name: '小明' }, { id: 'm2', name: '小華' }],
+      groups: [{ id: 'g1', name: '旅行', icon: '✈️', memberIds: ['m1'], createdAt: '' }],
+      expenses: [],
+      settlements: [],
+    });
+    useGroupStore.getState().addGroupMember('g1', 'm2');
+    useGroupStore.getState().addGroupMember('g1', 'm2');
+    expect(useGroupStore.getState().groups[0].memberIds).toEqual(['m1', 'm2']);
+  });
+});
