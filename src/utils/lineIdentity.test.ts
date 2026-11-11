@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { computeLineKey, findMyBinding, planLineResolution, suggestMemberForLineName } from './lineIdentity';
+import {
+  computeLineKey,
+  findMyBinding,
+  isLockedForMe,
+  planLineResolution,
+  suggestMemberForLineName,
+} from './lineIdentity';
 import type { LineBinding } from '../types';
 import type { Member } from '../types';
 
@@ -86,5 +92,27 @@ describe('suggestMemberForLineName', () => {
   it('已被別人綁定或沒有相符名字時不建議', () => {
     expect(suggestMemberForLineName(roster, { m2: binding(OTHER, '小華') }, '小華')).toBeUndefined();
     expect(suggestMemberForLineName(roster, {}, '路人')).toBeUndefined();
+  });
+});
+
+describe('isLockedForMe（身分鎖定）', () => {
+  const bindings = { m1: binding(OTHER, '小明'), m2: binding(KEY, '小華') };
+
+  it('沒有綁定的成員不鎖定', () => {
+    expect(isLockedForMe('m3', bindings, null)).toBe(false);
+    expect(isLockedForMe('m3', bindings, KEY)).toBe(false);
+  });
+
+  it('綁定在別的 LINE 帳號：鎖定（不論有沒有登入 LINE）', () => {
+    expect(isLockedForMe('m1', bindings, null)).toBe(true);
+    expect(isLockedForMe('m1', bindings, KEY)).toBe(true);
+  });
+
+  it('綁定在自己的 LINE 帳號：不鎖定', () => {
+    expect(isLockedForMe('m2', bindings, KEY)).toBe(false);
+  });
+
+  it('沒登入 LINE 時，連自己綁定的成員也鎖定（需要用 LINE 證明是本人）', () => {
+    expect(isLockedForMe('m2', bindings, null)).toBe(true);
   });
 });

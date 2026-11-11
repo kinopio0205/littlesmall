@@ -1,5 +1,5 @@
 import type { Liff } from '@line/liff';
-import { LIFF_LOGIN_PENDING_KEY } from '../utils/invite';
+import { LIFF_LOGIN_PENDING_KEY, buildCleanEntryUrl } from '../utils/invite';
 import type { LiffMode, LineProfile } from '../store/liffStore';
 
 // 整個 app 只有這個檔案載入 @line/liff；只在從 LINE 進來時才動態載入，一般瀏覽不會下載 SDK。
@@ -31,11 +31,14 @@ export async function readLiffState(liff: Liff): Promise<LiffSnapshot> {
   const loggedIn = liff.isLoggedIn();
   let profile: LineProfile | null = null;
   if (loggedIn) {
-    try {
-      const p = await liff.getProfile();
-      profile = { userId: p.userId, displayName: p.displayName };
-    } catch (error) {
-      console.warn('LINE getProfile 失敗：', error);
+    // 失敗時重試一次（網路或 LINE API 暫時性錯誤）。
+    for (let attempt = 0; attempt < 2 && !profile; attempt++) {
+      try {
+        const p = await liff.getProfile();
+        profile = { userId: p.userId, displayName: p.displayName };
+      } catch (error) {
+        console.warn(`LINE getProfile 失敗（第 ${attempt + 1} 次）：`, error);
+      }
     }
   }
   let canShare = false;
@@ -86,4 +89,31 @@ export async function shareWithPicker(text: string): Promise<'sent' | 'cancelled
   const liff = await initLiff();
   const result = await liff.shareTargetPicker([{ type: 'text', text }]);
   return result ? 'sent' : 'cancelled';
+}
+
+export const LIFF_LOGIN_REQUEST_KEY = 'liff-login-request';
+
+/**
+ * 從一般網址（沒有走 LINE 入口）要求用 LINE 登入：先轉到 LINE 入口網址（?src=liff&space=…），
+ * 初始化後由 main.tsx 讀到這個旗標，自動呼叫 liff.login。
+ * LINE 要求登入的回呼網址以 Endpoint URL 開頭，所以必須先回到入口網址再登入。
+ */
+export function startLineLoginFromBrowser(code: string) {
+  try {
+    sessionStorage.setItem(LIFF_LOGIN_REQUEST_KEY, '1');
+  } catch {
+    // 沒有 sessionStorage 時，轉過去後使用者再按一次「用 LINE 登入」即可
+  }
+  window.location.href = buildCleanEntryUrl(window.location.origin, import.meta.env.BASE_URL, code, true);
+}
+
+/** 讀取並清除「進入後自動 LINE 登入」的旗標。 */
+export function consumeLoginRequest(): boolean {
+  try {
+    const requested = sessionStorage.getItem(LIFF_LOGIN_REQUEST_KEY) === '1';
+    sessionStorage.removeItem(LIFF_LOGIN_REQUEST_KEY);
+    return requested;
+  } catch {
+    return false;
+  }
 }

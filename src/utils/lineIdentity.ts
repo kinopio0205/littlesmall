@@ -62,3 +62,12 @@ export function suggestMemberForLineName(roster: Member[], bindings: BindingMap,
   if (!target) return undefined;
   return roster.find((m) => normalizeName(m.name) === target && !bindings[m.id]);
 }
+
+/**
+ * 身分鎖定：成員已綁定 LINE，而且不是綁在「目前登入的這個 LINE 帳號」時，不能手動選這個身分。
+ * 前端的防呆，不是安全機制（沒有後端驗證；知道同步碼的人仍可直接改資料）。
+ */
+export function isLockedForMe(memberId: string, bindings: BindingMap, myLineKey: string | null): boolean {
+  const binding = bindings[memberId];
+  return !!binding && binding.lineKey !== myLineKey;
+}

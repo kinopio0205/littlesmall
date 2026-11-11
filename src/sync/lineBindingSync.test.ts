@@ -140,3 +140,14 @@ describe('connectLineBindings', () => {
     expect(Object.keys(useBindingStore.getState().bindings)).toEqual(['m1']);
   });
 });
+
+describe('connectLineBindings（沒有登入 LINE）', () => {
+  it('仍會載入綁定清單（用來鎖定已綁定的成員），myLineKey 為 null', async () => {
+    const code = freshCode();
+    await setDoc(bindingRef(code, 'm1'), { lineKey: OTHER, memberName: '小明', boundAt: 'x', v: 1 });
+    connectLineBindings(code, null, () => {});
+    await vi.waitFor(() => expect(useBindingStore.getState().ready).toBe(true), WAIT);
+    expect(Object.keys(useBindingStore.getState().bindings)).toEqual(['m1']);
+    expect(useBindingStore.getState().myLineKey).toBeNull();
+  });
+});

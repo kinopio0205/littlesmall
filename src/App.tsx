@@ -18,7 +18,7 @@ import { useRecentSpacesStore } from './store/lastSpaceStore';
 import { useBindingStore } from './store/bindingStore';
 import { useGroupStore } from './store/groupStore';
 import { connectLineBindings, disconnectLineBindings } from './sync/lineBindingSync';
-import { computeLineKey } from './utils/lineIdentity';
+import { computeLineKey, isLockedForMe } from './utils/lineIdentity';
 import { applyLineResolution } from './utils/lineResolution';
 
 export default function App() {
@@ -27,14 +27,32 @@ export default function App() {
   const clearCode = useSyncStore((s) => s.clearCode);
   const lineUserId = useLiffStore((s) => s.profile?.userId);
   const bindingsReady = useBindingStore((s) => s.ready && s.code === code);
+  const bindings = useBindingStore((s) => s.bindings);
+  const myLineKey = useBindingStore((s) => s.myLineKey);
+  // 已登入 LINE 但讀不到個人資料（getProfile 失敗）：無法判斷是不是本人，先不鎖定，避免把本人鎖在外面。
+  const liffMode = useLiffStore((s) => s.mode);
+  const lineProfileMissing = (liffMode === 'client' || liffMode === 'external-loggedin') && !lineUserId;
+  const myMemberLocked =
+    !!myMember && bindingsReady && !lineProfileMissing && isLockedForMe(myMember.id, bindings, myLineKey);
+
+  // 身分鎖定：本機記住的身分已綁定 LINE、但這次不是用那個 LINE 帳號開啟（或沒登入 LINE），畫面上視為沒有身分並提示。
+  // 不清除本機記住的身分：同一個瀏覽器的其他分頁（例如已登入 LINE 的分頁）共用這份資料，清掉會把它們也踢出去。
+  useEffect(() => {
+    if (!code || !myMemberLocked || !myMember) return;
+    useBindingStore
+      .getState()
+      .setNotice(
+        `「${myMember.name}」已綁定 LINE，請從 LINE 開啟或用 LINE 登入才能使用這個身分。若綁錯了，請綁定者在右上角「LINE ✓」解除綁定。`,
+      );
+  }, [code, myMemberLocked, myMember]);
   const [syncReady, setSyncReady] = useState(false);
   const [syncError, setSyncError] = useState('');
 
-  // 已登入 LINE 時監聽這個空間的綁定清單；清單更新後重新依綁定決定身分。
+  // 監聽這個空間的綁定清單（沒登入 LINE 也要讀：用來鎖定已綁定的成員）；清單更新後重新依綁定決定身分。
   useEffect(() => {
-    if (!code || !lineUserId) return;
+    if (!code) return;
     let cancelled = false;
-    computeLineKey(code, lineUserId)
+    (lineUserId ? computeLineKey(code, lineUserId) : Promise.resolve(null))
       .then((key) => {
         if (!cancelled) connectLineBindings(code, key, () => applyLineResolution(code));
       })
@@ -107,8 +125,8 @@ export default function App() {
     );
   }
 
-  // 已登入 LINE 時，也要等綁定清單載入，才知道要自動辨識還是詢問身分（避免畫面先閃一下身分選擇）。
-  if (!syncReady || (lineUserId && !bindingsReady)) {
+  // 也要等綁定清單載入：才知道要自動辨識、詢問身分，或哪些成員已鎖定（避免畫面先閃一下或選到被鎖定的身分）。
+  if (!syncReady || !bindingsReady) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
@@ -125,7 +143,8 @@ export default function App() {
     );
   }
 
-  if (!myMember) return <IdentitySelect />;
+  // 目前身分已綁定別的（或需要登入的）LINE 帳號：不能沿用，回到身分選擇。
+  if (!myMember || myMemberLocked) return <IdentitySelect />;
 
   return (
     <Routes>

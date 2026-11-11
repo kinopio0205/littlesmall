@@ -33,7 +33,7 @@ let unsubscribe: (() => void) | null = null;
  * 監聽目前空間的綁定清單。只採用伺服器確認過的結果（離線時快取可能是空的，不能當成「沒有綁定」）。
  * onUpdate 在每次清單更新後呼叫，用來重新決定身分。
  */
-export function connectLineBindings(code: string, myLineKey: string, onUpdate: () => void) {
+export function connectLineBindings(code: string, myLineKey: string | null, onUpdate: () => void) {
   disconnectLineBindings();
   useBindingStore.getState().reset(code, myLineKey);
   unsubscribe = onSnapshot(

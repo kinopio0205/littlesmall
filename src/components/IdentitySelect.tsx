@@ -5,9 +5,9 @@ import { useIdentityStore } from '../store/identityStore';
 import { useSyncStore } from '../store/syncStore';
 import { useLiffStore } from '../store/liffStore';
 import { useBindingStore } from '../store/bindingStore';
-import { loginWithLine } from '../liff/liffClient';
+import { LIFF_ID, loginWithLine, startLineLoginFromBrowser } from '../liff/liffClient';
 import { BindingTakenError, bindMember } from '../sync/lineBindingSync';
-import { findMyBinding, suggestMemberForLineName } from '../utils/lineIdentity';
+import { findMyBinding, isLockedForMe, suggestMemberForLineName } from '../utils/lineIdentity';
 import Logo from './Logo';
 import PendingInviteBanner from './PendingInviteBanner';
 
@@ -29,6 +29,7 @@ export default function IdentitySelect() {
   const skipped = useBindingStore((s) => (code ? !!s.skippedCodes[code] : false));
   const setSkipped = useBindingStore((s) => s.setSkipped);
   const setNotice = useBindingStore((s) => s.setNotice);
+  const notice = useBindingStore((s) => s.notice);
 
   // 已登入 LINE、這個 LINE 帳號在此空間還沒綁定、也沒選「先不綁定／不再詢問」：選身分的同時綁定 LINE。
   // 已有綁定（例如手動切換身分但保留綁定）時只切換身分，不改綁。
@@ -41,7 +42,11 @@ export default function IdentitySelect() {
   const [dontAskAgain, setDontAskAgain] = useState(false);
 
   const knownMembers = [...roster].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
-  const boundByOthers = (memberId: string) => !!bindings[memberId] && bindings[memberId].lineKey !== myLineKey;
+  // 身分鎖定：已綁定 LINE、但不是綁在目前登入的 LINE 帳號（或沒登入 LINE）的成員，不能手動選。
+  // 已登入 LINE 但讀不到個人資料時無法判斷是不是本人，先不鎖定（與 App 的判斷一致），並提示重新載入。
+  const lineProfileMissing = (liffMode === 'client' || liffMode === 'external-loggedin') && !lineProfile;
+  const locked = (memberId: string) => !lineProfileMissing && isLockedForMe(memberId, bindings, myLineKey);
+  const anyLocked = roster.some((m) => locked(m.id));
   const suggested = bindMode && lineProfile ? suggestMemberForLineName(roster, bindings, lineProfile.displayName) : undefined;
 
   /** 綁定（在綁定模式下）後設定身分。綁定寫入失敗時仍讓使用者進入，只提示沒存到。 */
@@ -106,15 +111,37 @@ export default function IdentitySelect() {
           )}
         </div>
 
-        {liffMode === 'external-guest' && (
+        {notice && <p className="mb-4 text-xs text-amber-300 text-center">{notice}</p>}
+
+        {(liffMode === 'external-guest' || (liffMode === 'off' && !!LIFF_ID && anyLocked)) && (
           <button
             onClick={() => {
-              loginWithLine().catch((e) => console.error('LINE 登入失敗：', e));
+              if (liffMode === 'external-guest') {
+                loginWithLine().catch((e) => console.error('LINE 登入失敗：', e));
+              } else if (code) {
+                // 一般網址開啟：先轉到 LINE 入口網址，初始化後自動進入 LINE 登入。
+                startLineLoginFromBrowser(code);
+              }
             }}
             className="w-full mb-4 py-2.5 rounded-lg bg-[#06C755] text-white font-medium hover:brightness-110"
           >
             用 LINE 登入，自動辨識身分
           </button>
+        )}
+        {lineProfileMissing && (
+          <div className="mb-4 text-xs text-amber-300 text-center">
+            無法讀取 LINE 個人資料，暫時無法自動辨識身分。
+            <button onClick={() => window.location.reload()} className="ml-1 underline hover:text-amber-200">
+              重新載入
+            </button>
+          </div>
+        )}
+        {anyLocked && (
+          <p className="mb-4 text-xs text-slate-500 text-center">
+            {lineProfile
+              ? '🔒 已綁定其他 LINE 帳號的成員不能選。若綁錯了，請綁定者在右上角「LINE ✓」解除綁定。'
+              : '🔒 已綁定 LINE 的成員，需從 LINE 開啟或用 LINE 登入才能使用。'}
+          </p>
         )}
         {lineProfile && !bindMode && (
           <p className="mb-4 text-xs text-slate-500 text-center">已登入 LINE：{lineProfile.displayName}</p>
@@ -135,12 +162,12 @@ export default function IdentitySelect() {
             <div className="text-xs text-slate-500 mb-2">選擇已知成員</div>
             <div className="flex flex-wrap gap-2">
               {knownMembers.map((m) => {
-                const taken = bindMode && boundByOthers(m.id);
+                const taken = locked(m.id);
                 return (
                   <button
                     key={m.id}
                     disabled={busy || taken}
-                    title={taken ? '已綁定其他 LINE 帳號' : undefined}
+                    title={taken ? '已綁定 LINE：需從 LINE 開啟或用 LINE 登入' : undefined}
                     onClick={() => void enter(m.id, m.name)}
                     className={clsx(
                       'px-3 py-1.5 rounded-full border text-sm',
@@ -150,7 +177,7 @@ export default function IdentitySelect() {
                     )}
                   >
                     {m.name}
-                    {taken && <span className="ml-1 text-[10px]">已綁定</span>}
+                    {taken && <span className="ml-1 text-[10px]">🔒 已綁定 LINE</span>}
                   </button>
                 );
               })}

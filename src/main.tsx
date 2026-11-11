@@ -4,7 +4,15 @@ import { HashRouter } from 'react-router-dom';
 import './index.css';
 import App from './App.tsx';
 import LiffConnecting from './components/LiffConnecting.tsx';
-import { LIFF_ID, clearLoginPending, initLiff, readLiffState, readLoginPending } from './liff/liffClient';
+import {
+  LIFF_ID,
+  clearLoginPending,
+  consumeLoginRequest,
+  initLiff,
+  loginWithLine,
+  readLiffState,
+  readLoginPending,
+} from './liff/liffClient';
 import { useLiffStore } from './store/liffStore';
 import {
   applyInvite,
@@ -77,10 +85,15 @@ async function bootstrap() {
     const state = await readLiffState(liff);
     if (!settle()) return; // 使用者已略過：晚到的結果一律丟棄
     useLiffStore.getState().setLiff(state);
+    // 從一般網址按了「用 LINE 登入」而轉來：初始化完成後直接進入 LINE 登入（會轉址離開）。
+    if (consumeLoginRequest() && state.mode === 'external-guest') {
+      loginWithLine().catch((e) => console.error('LINE 登入失敗：', e));
+    }
     // 只有在 LINE App 內點連結才直接切換空間；外部瀏覽器沿用確認橫幅。
     finishInvite(parseInvite(window.location.search), state.mode === 'client');
   } catch (error) {
     if (!settle()) return;
+    consumeLoginRequest(); // 初始化失敗就不自動登入，避免旗標殘留到之後的開啟
     if (hasOAuthError(window.location.search)) {
       // 外部瀏覽器取消或登入失敗：錯誤參數留在網址上會讓每次 init 都失敗。
       // 回到不帶錯誤參數的 LINE 入口，讓「用 LINE 登入」按鈕重新出現。
