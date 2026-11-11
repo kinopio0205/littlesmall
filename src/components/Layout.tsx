@@ -7,6 +7,7 @@ import { useRecentSpacesStore } from '../store/lastSpaceStore';
 import { useMyMember } from '../hooks/useMyMember';
 import PendingInviteBanner from './PendingInviteBanner';
 import LineBindingBar from './LineBindingBar';
+import ShareToLineButton from './ShareToLineButton';
 import { useBindingStore } from '../store/bindingStore';
 import { unbindMine } from '../sync/lineBindingSync';
 import { findMyBinding } from '../utils/lineIdentity';
@@ -113,7 +114,7 @@ export default function Layout() {
         <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3 gap-2">
           <div className="flex items-center gap-2 font-bold text-lg shrink-0">
             <Logo />
-            <span className="bg-gradient-to-r from-cyan-300 to-violet-400 bg-clip-text text-transparent">
+            <span className="hidden sm:inline bg-gradient-to-r from-cyan-300 to-violet-400 bg-clip-text text-transparent">
               小呆記帳
             </span>
           </div>
@@ -143,14 +144,16 @@ export default function Layout() {
               >
                 {linkCopied ? '✓' : '🔗'}
               </button>
+              {code && <ShareToLineButton code={code} />}
             </div>
             {myBoundHere && (
               <button
                 onClick={() => void unbindLine()}
                 className="text-[11px] text-emerald-300 border border-emerald-400/30 bg-emerald-500/10 rounded-full px-2 py-1 hover:bg-emerald-500/20 whitespace-nowrap"
                 title="這個 LINE 帳號已綁定此身分；點擊可解除"
+                aria-label="已綁定 LINE，點擊可解除"
               >
-                LINE ✓
+                <span className="hidden sm:inline">LINE </span>✓
               </button>
             )}
             <button
@@ -159,7 +162,7 @@ export default function Layout() {
             >
               <span>👤</span>
               <span>{myMember?.name}</span>
-              <span className="text-slate-500">切換</span>
+              <span className="hidden sm:inline text-slate-500">切換</span>
             </button>
           </div>
         </div>

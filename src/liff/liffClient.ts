@@ -77,3 +77,13 @@ export function readLoginPending(): boolean {
     return false;
   }
 }
+
+/**
+ * 用 LINE 的「分享對象選擇器」傳送文字訊息。
+ * 回傳 'sent'（已送出）或 'cancelled'（使用者關閉選擇器）；在選擇器出現前失敗則丟出錯誤，由呼叫端改用其他方式分享。
+ */
+export async function shareWithPicker(text: string): Promise<'sent' | 'cancelled'> {
+  const liff = await initLiff();
+  const result = await liff.shareTargetPicker([{ type: 'text', text }]);
+  return result ? 'sent' : 'cancelled';
+}
