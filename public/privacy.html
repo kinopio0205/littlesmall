@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小呆記帳 隱私權政策</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        background: #020617;
+        color: #cbd5e1;
+        font: 15px/1.75 system-ui, -apple-system, 'Noto Sans TC', sans-serif;
+      }
+      main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+      h1 { color: #e2e8f0; font-size: 1.5rem; margin-bottom: 0.25rem; }
+      h2 { color: #67e8f9; font-size: 1.05rem; margin-top: 2rem; }
+      .meta { color: #64748b; font-size: 0.85rem; }
+      a { color: #67e8f9; }
+      li { margin: 0.25rem 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>小呆記帳 隱私權政策</h1>
+      <p class="meta">最後更新：2026 年 11 月 11 日</p>
+
+      <p>小呆記帳是一個多人分帳的網頁應用程式。本政策說明我們會蒐集哪些資料、如何使用，以及你的選擇。</p>
+
+      <h2>我們儲存的資料</h2>
+      <ul>
+        <li><strong>分帳資料</strong>：你在分帳空間中輸入的成員暱稱、群組、支出與還款紀錄。這些資料儲存在 Google Firebase（Cloud Firestore），並以「同步碼」區分不同的分帳空間。</li>
+        <li><strong>LINE 帳號識別（僅在你使用 LINE 登入或從 LINE 開啟時）</strong>：我們只儲存 LINE 使用者 ID 經單向雜湊（SHA-256）後的值，用來在同一個分帳空間中自動辨識你是哪位成員。我們不儲存 LINE 使用者 ID 原文，也不儲存你的 LINE 顯示名稱、大頭貼或電子郵件。</li>
+        <li><strong>瀏覽器本機資料</strong>：你的同步碼、在各空間選擇的成員身分，以及最近使用的空間清單，只會存在你自己瀏覽器的 localStorage 中。</li>
+      </ul>
+
+      <h2>資料的使用方式</h2>
+      <ul>
+        <li>只用於提供分帳功能：在不同裝置之間同步分帳資料，以及辨識你在分帳空間中的身分。</li>
+        <li>不用於廣告、行銷或分析，也不會出售或提供給第三方。</li>
+      </ul>
+
+      <h2>誰看得到你的資料</h2>
+      <p>知道同步碼的人都能讀取與修改該分帳空間的資料。請只把同步碼或邀請連結分享給一起分帳的人。</p>
+
+      <h2>第三方服務</h2>
+      <ul>
+        <li>Google Firebase：儲存分帳資料。</li>
+        <li>LINE（LY Corporation）：提供 LINE 登入與在 LINE 中開啟本應用程式的功能。</li>
+        <li>GitHub Pages：提供網站託管。</li>
+      </ul>
+
+      <h2>你的選擇</h2>
+      <ul>
+        <li>你可以不使用 LINE 登入，改以手動選擇成員的方式使用。</li>
+        <li>你可以在應用程式中解除自己的 LINE 綁定，解除後該雜湊值即從分帳空間中刪除。</li>
+        <li>清除瀏覽器的網站資料，即可移除本機儲存的同步碼與身分。</li>
+        <li>如需刪除整個分帳空間的資料，請透過下方聯絡方式提出。</li>
+      </ul>
+
+      <h2>聯絡我們</h2>
+      <p>對本政策有任何問題，請至 <a href="https://github.com/kinopio0205/littlesmall/issues">GitHub Issues</a> 提出。</p>
+    </main>
+  </body>
+</html>
