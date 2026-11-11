@@ -37,7 +37,6 @@ export default function Layout() {
   const [linkCopied, setLinkCopied] = useState(false);
   const myLineKey = useBindingStore((s) => (s.code === code && s.ready ? s.myLineKey : null));
   const bindings = useBindingStore((s) => s.bindings);
-  const setOverridden = useBindingStore((s) => s.setOverridden);
   const setNotice = useBindingStore((s) => s.setNotice);
   const setSkipped = useBindingStore((s) => s.setSkipped);
   const myBinding = findMyBinding(bindings, myLineKey);
@@ -45,7 +44,7 @@ export default function Layout() {
 
   async function unbindLine() {
     if (!code || !myLineKey || !myMember) return;
-    if (!confirm(`解除這個 LINE 帳號與「${myMember.name}」的綁定？\n解除後，下次從 LINE 開啟需要重新選擇身分。`)) return;
+    if (!confirm(`解除這個 LINE 帳號與「${myMember.name}」的綁定？\n解除後需要重新選擇你是哪一位（在 LINE 裡會立刻回到選擇畫面）。`)) return;
     // 使用者剛表示不要綁定：這次開啟期間不再建議綁回目前身分。
     setSkipped(code);
     try {
@@ -57,23 +56,29 @@ export default function Layout() {
     }
   }
 
-  function switchIdentity() {
-    if (!code || !confirm(`切換身分？目前身分為「${myMember?.name}」。`)) return;
+  async function switchIdentity() {
+    setNotice(null); // 先清掉舊提示（例如「已用 LINE 自動辨識」），避免在選身分畫面誤導
+    if (!code) return;
     if (myBinding && myLineKey) {
-      const unbind = confirm(
-        `這個 LINE 帳號綁定在「${myBinding.binding.memberName}」。要一併解除綁定嗎？\n\n確定：解除綁定\n取消：保留綁定（這次開啟期間不會自動切回）`,
-      );
-      // 不論是否解除，這次開啟期間都不再自動切回綁定的成員：
-      // 解除可能失敗或因離線而遲遲沒完成，期間的名單更新不該把手動選的身分換掉。
-      setOverridden(code);
-      if (unbind) {
-        // 不等待伺服器確認，先讓使用者重新選身分；失敗時再提示。
-        unbindMine(code, myLineKey).catch((e) => {
-          console.error('解除 LINE 綁定失敗：', e);
-          setNotice('解除 LINE 綁定失敗，請稍後再試');
-        });
+      // LINE 內的身分跟著綁定走：要換身分，必須先解除目前的 LINE 綁定，之後會回到綁定畫面重新選擇。
+      if (
+        !confirm(
+          `這個 LINE 帳號目前綁定為「${myBinding.binding.memberName}」。
+要切換身分，需要先解除這個綁定，之後再選擇你是哪一位。確定要解除嗎？`,
+        )
+      )
+        return;
+      try {
+        await unbindMine(code, myLineKey);
+      } catch (e) {
+        console.error("解除 LINE 綁定失敗：", e);
+        setNotice("解除 LINE 綁定失敗，請稍後再試");
+        return;
       }
+      clearMember(code);
+      return;
     }
+    if (!confirm(`切換身分？目前身分為「${myMember?.name}」。`)) return;
     clearMember(code);
   }
 
@@ -157,7 +162,7 @@ export default function Layout() {
               </button>
             )}
             <button
-              onClick={switchIdentity}
+              onClick={() => void switchIdentity()}
               className="flex items-center gap-1.5 text-xs text-slate-300 border border-slate-700 bg-slate-800/60 rounded-full px-3 py-1.5 hover:border-cyan-400/50 hover:text-cyan-300 whitespace-nowrap"
             >
               <span>👤</span>

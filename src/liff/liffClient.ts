@@ -98,7 +98,7 @@ export const LIFF_LOGIN_REQUEST_KEY = 'liff-login-request';
  * 初始化後由 main.tsx 讀到這個旗標，自動呼叫 liff.login。
  * LINE 要求登入的回呼網址以 Endpoint URL 開頭，所以必須先回到入口網址再登入。
  */
-export function startLineLoginFromBrowser(code: string) {
+export function startLineLoginFromBrowser(code: string | null) {
   try {
     sessionStorage.setItem(LIFF_LOGIN_REQUEST_KEY, '1');
   } catch {

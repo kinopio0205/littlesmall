@@ -17,8 +17,6 @@ export default function IdentitySelect() {
   const code = useSyncStore((s) => s.code);
   const setCode = useSyncStore((s) => s.setCode);
   const setMember = useIdentityStore((s) => s.setMember);
-  const noLineAsk = useIdentityStore((s) => (code ? !!s.noLineAskByCode?.[code] : false));
-  const setNoLineAsk = useIdentityStore((s) => s.setNoLineAsk);
   const switched = useLiffStore((s) => s.switched);
   const setSwitched = useLiffStore((s) => s.setSwitched);
   const switchedFrom = switched && switched.to === code ? switched.from : null;
@@ -26,20 +24,19 @@ export default function IdentitySelect() {
   const lineProfile = useLiffStore((s) => s.profile);
   const myLineKey = useBindingStore((s) => (s.code === code && s.ready ? s.myLineKey : null));
   const bindings = useBindingStore((s) => s.bindings);
-  const skipped = useBindingStore((s) => (code ? !!s.skippedCodes[code] : false));
-  const setSkipped = useBindingStore((s) => s.setSkipped);
+  const bindFailed = useBindingStore((s) => (code ? !!s.bindFailedCodes[code] : false));
+  const setBindFailed = useBindingStore((s) => s.setBindFailed);
   const setNotice = useBindingStore((s) => s.setNotice);
   const notice = useBindingStore((s) => s.notice);
 
-  // 已登入 LINE、這個 LINE 帳號在此空間還沒綁定、也沒選「先不綁定／不再詢問」：選身分的同時綁定 LINE。
-  // 已有綁定（例如手動切換身分但保留綁定）時只切換身分，不改綁。
+  // 用 LINE 進入、這個 LINE 帳號在此空間還沒綁定：必須綁定（選未綁定的成員，或用 LINE 名稱加入），不能略過。
+  // 綁定寫入失敗（規則未設定、離線）時，這次開啟改用一般方式選身分，避免卡住。
   const alreadyBound = !!findMyBinding(bindings, myLineKey);
-  const bindMode = !!lineProfile && !!myLineKey && !alreadyBound && !noLineAsk && !skipped;
+  const bindMode = !!lineProfile && !!myLineKey && !alreadyBound && !bindFailed;
 
   const [name, setName] = useState(() => (bindMode && lineProfile ? lineProfile.displayName : ''));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   const knownMembers = [...roster].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
   // 身分鎖定：已綁定 LINE、但不是綁在目前登入的 LINE 帳號（或沒登入 LINE）的成員，不能手動選。
@@ -48,6 +45,9 @@ export default function IdentitySelect() {
   const locked = (memberId: string) => !lineProfileMissing && isLockedForMe(memberId, bindings, myLineKey);
   const anyLocked = roster.some((m) => locked(m.id));
   const suggested = bindMode && lineProfile ? suggestMemberForLineName(roster, bindings, lineProfile.displayName) : undefined;
+  // LINE 名稱還沒有人用：提供一鍵「以 LINE 名稱加入」（有同名成員時改走「我是 X」或自行輸入其他名稱）。
+  const canJoinWithLineName =
+    bindMode && !!lineProfile?.displayName.trim() && !roster.some((m) => m.name === lineProfile.displayName.trim());
 
   /** 綁定（在綁定模式下）後設定身分。綁定寫入失敗時仍讓使用者進入，只提示沒存到。 */
   async function enter(memberId: string, memberName: string) {
@@ -64,7 +64,8 @@ export default function IdentitySelect() {
           return;
         }
         console.error('LINE 綁定失敗：', e);
-        setNotice('LINE 綁定未儲存，下次可能需要重新選擇身分');
+        setBindFailed(code);
+        setNotice('LINE 綁定未儲存，這次先以此身分進入；下次從 LINE 開啟可能需要重新選擇');
       }
       setBusy(false);
     }
@@ -81,13 +82,6 @@ export default function IdentitySelect() {
     void enter(id, n.trim());
   }
 
-  function skipBinding() {
-    if (!code) return;
-    if (dontAskAgain) setNoLineAsk(code);
-    setSkipped(code);
-    setName('');
-    setError('');
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -104,7 +98,9 @@ export default function IdentitySelect() {
           {bindMode && lineProfile ? (
             <>
               <p className="text-sm text-slate-300 mt-2">LINE：{lineProfile.displayName}</p>
-              <p className="text-sm text-slate-500 mt-1">在這個空間裡你是哪一位？選擇後，下次從 LINE 開啟會自動辨識。</p>
+              <p className="text-sm text-slate-500 mt-1">
+                這個 LINE 帳號還不是此空間的成員。請選擇你是哪一位（未綁定的成員），或用 LINE 名稱加入。
+              </p>
             </>
           ) : (
             <p className="text-sm text-slate-500 mt-1">請選擇你的身分，開始分帳</p>
@@ -154,6 +150,15 @@ export default function IdentitySelect() {
             className="w-full mb-4 py-2.5 rounded-lg border border-cyan-400/50 bg-cyan-500/10 text-cyan-200 font-medium hover:bg-cyan-500/20 disabled:opacity-40"
           >
             我是「{suggested.name}」
+          </button>
+        )}
+        {canJoinWithLineName && lineProfile && (
+          <button
+            disabled={busy}
+            onClick={() => joinAsNew(lineProfile.displayName)}
+            className="w-full mb-4 py-2.5 rounded-lg bg-[#06C755] text-white font-medium hover:brightness-110 disabled:opacity-40"
+          >
+            以 LINE 名稱「{lineProfile.displayName.trim()}」加入
           </button>
         )}
 
@@ -216,17 +221,6 @@ export default function IdentitySelect() {
           </button>
         </form>
 
-        {bindMode && (
-          <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-between gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-slate-500">
-              <input type="checkbox" checked={dontAskAgain} onChange={(e) => setDontAskAgain(e.target.checked)} />
-              此空間不再詢問
-            </label>
-            <button onClick={skipBinding} className="text-xs text-slate-400 hover:text-cyan-300">
-              這次先不綁定 →
-            </button>
-          </div>
-        )}
 
         {switchedFrom && (
           // 從 LINE 連結直接切換過來、還沒選身分時，主畫面的「回到上一個空間」橫幅還看不到，這裡也提供返回。

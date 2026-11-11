@@ -52,7 +52,7 @@ export function connectLineBindings(code: string, myLineKey: string | null, onUp
     (error) => {
       // 讀取被拒（例如安全規則尚未開放）時，視為沒有綁定，不擋住使用者。
       console.error('LINE 綁定讀取失敗：', error);
-      useBindingStore.getState().setBindings({});
+      useBindingStore.getState().setBindingsError();
       onUpdate();
     },
   );

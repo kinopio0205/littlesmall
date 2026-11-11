@@ -71,3 +71,11 @@ export function isLockedForMe(memberId: string, bindings: BindingMap, myLineKey:
   const binding = bindings[memberId];
   return !!binding && binding.lineKey !== myLineKey;
 }
+
+/**
+ * 用 LINE 進入空間時強制綁定：已登入 LINE（有 lineKey），但這個 LINE 帳號在此空間沒有綁定任何成員。
+ * bindFailed：這次綁定寫入失敗（例如規則未設定或離線），允許暫時進入，避免卡在綁定畫面。
+ */
+export function mustBindLine(bindings: BindingMap, myLineKey: string | null, bindFailed: boolean): boolean {
+  return !!myLineKey && !bindFailed && !findMyBinding(bindings, myLineKey);
+}

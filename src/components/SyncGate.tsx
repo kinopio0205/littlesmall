@@ -3,10 +3,21 @@ import { useSyncStore } from '../store/syncStore';
 import { useRecentSpacesStore } from '../store/lastSpaceStore';
 import { generateSyncCode, normalizeSyncCode, buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
+import { useLiffStore } from '../store/liffStore';
+import { useLineSpacesStore } from '../store/lineSpacesStore';
+import { LIFF_ID, loginWithLine, startLineLoginFromBrowser } from '../liff/liffClient';
 
 export default function SyncGate() {
   const setCode = useSyncStore((s) => s.setCode);
   const lastSpace = useRecentSpacesStore((s) => s.recentSpaces[0]);
+  const liffMode = useLiffStore((s) => s.mode);
+  const lineProfile = useLiffStore((s) => s.profile);
+  const lineSpaces = useLineSpacesStore((s) => s.spaces);
+  const lineSpacesLoaded = useLineSpacesStore((s) => s.loaded);
+  const lineSpacesFailed = useLineSpacesStore((s) => s.failed);
+  const retryLineSpaces = useLineSpacesStore((s) => s.retry);
+  // 依最近更新排序：最近用過的空間在最上面。
+  const lineEntries = Object.entries(lineSpaces).sort((a, b) => (a[1].updatedAt < b[1].updatedAt ? 1 : -1));
   const [mode, setMode] = useState<'choose' | 'create' | 'join'>('choose');
   const [newCode] = useState(() => generateSyncCode());
   const [joinInput, setJoinInput] = useState('');
@@ -53,7 +64,53 @@ export default function SyncGate() {
 
         {mode === 'choose' && (
           <div className="flex flex-col gap-3">
-            {lastSpace && (
+            {lineProfile && !lineSpacesLoaded && !lineSpacesFailed && (
+              <p className="text-xs text-slate-500 text-center">讀取你的 LINE 分帳空間…</p>
+            )}
+            {lineProfile && lineSpacesFailed && (
+              <p className="text-xs text-amber-300 text-center">
+                無法讀取你的 LINE 分帳空間。
+                <button onClick={retryLineSpaces} className="ml-1 underline hover:text-amber-200">
+                  重試
+                </button>
+              </p>
+            )}
+            {lineEntries.length > 0 && (
+              <div className="mb-1">
+                <div className="text-xs text-slate-500 mb-2">你的 LINE 分帳空間（{lineProfile?.displayName}）</div>
+                <div className="flex flex-col gap-2">
+                  {lineEntries.map(([spaceCode, entry]) => (
+                    <button
+                      key={spaceCode}
+                      onClick={() => setCode(spaceCode)}
+                      className="w-full py-2.5 px-3 rounded-lg border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 text-sm hover:bg-emerald-500/20 flex items-center justify-between gap-2"
+                    >
+                      <span>{entry.memberName}</span>
+                      <span className="font-mono text-xs text-emerald-300/80">{spaceCode}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {liffMode === 'off' && !!LIFF_ID && (
+              <button
+                onClick={() => startLineLoginFromBrowser(null)}
+                className="w-full py-2.5 rounded-lg bg-[#06C755] text-white text-sm font-medium hover:brightness-110"
+              >
+                用 LINE 登入，列出你的分帳空間
+              </button>
+            )}
+            {liffMode === 'external-guest' && (
+              <button
+                onClick={() => {
+                  loginWithLine().catch((e) => console.error('LINE 登入失敗：', e));
+                }}
+                className="w-full py-2.5 rounded-lg bg-[#06C755] text-white text-sm font-medium hover:brightness-110"
+              >
+                用 LINE 登入，列出你的分帳空間
+              </button>
+            )}
+            {lastSpace && !lineSpaces[lastSpace.code] && (
               <button
                 onClick={returnToLastSpace}
                 className="w-full py-3 rounded-lg border border-cyan-400/40 bg-cyan-500/10 text-cyan-300 font-medium hover:bg-cyan-500/20 flex items-center justify-center gap-2"

@@ -3,6 +3,7 @@ import {
   computeLineKey,
   findMyBinding,
   isLockedForMe,
+  mustBindLine,
   planLineResolution,
   suggestMemberForLineName,
 } from './lineIdentity';
@@ -114,5 +115,26 @@ describe('isLockedForMe（身分鎖定）', () => {
 
   it('沒登入 LINE 時，連自己綁定的成員也鎖定（需要用 LINE 證明是本人）', () => {
     expect(isLockedForMe('m2', bindings, null)).toBe(true);
+  });
+});
+
+describe('mustBindLine（用 LINE 進入時強制綁定）', () => {
+  const bindings = { m1: binding(OTHER, '小明'), m2: binding(KEY, '小華') };
+
+  it('已登入 LINE、這個帳號在此空間沒有綁定：必須綁定', () => {
+    expect(mustBindLine({ m1: binding(OTHER, '小明') }, KEY, false)).toBe(true);
+    expect(mustBindLine({}, KEY, false)).toBe(true);
+  });
+
+  it('已經綁定：不需要', () => {
+    expect(mustBindLine(bindings, KEY, false)).toBe(false);
+  });
+
+  it('沒登入 LINE：不需要', () => {
+    expect(mustBindLine(bindings, null, false)).toBe(false);
+  });
+
+  it('這次綁定寫入失敗、允許暫時進入：不需要', () => {
+    expect(mustBindLine({}, KEY, true)).toBe(false);
   });
 });

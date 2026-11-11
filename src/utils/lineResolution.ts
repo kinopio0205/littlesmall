@@ -18,7 +18,8 @@ export function applyLineResolution(code: string) {
     bindings: binding.bindings,
     myLineKey: binding.myLineKey,
     currentMemberId: identity.byCode[code],
-    overridden: !!binding.overriddenCodes[code],
+    // LINE 內身分一律跟著綁定走（切換身分需先解除綁定），不再有「保留綁定但手動切換」的情況。
+    overridden: false,
   });
   if (plan.restore) group.ensureRosterMember(plan.restore);
   if (plan.setMemberId) identity.setMember(code, plan.setMemberId);

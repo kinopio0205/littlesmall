@@ -10,6 +10,7 @@ import Balances from './pages/Balances';
 import Groups from './pages/Groups';
 import GroupDetail from './pages/GroupDetail';
 import { useMyMember } from './hooks/useMyMember';
+import { useLineSpacesSync } from './hooks/useLineSpacesSync';
 import { applyLegacyIdentityMigration } from './utils/identityMigration';
 import { useSyncStore } from './store/syncStore';
 import { connectSync, disconnectSync } from './sync/firestoreSync';
@@ -18,10 +19,11 @@ import { useRecentSpacesStore } from './store/lastSpaceStore';
 import { useBindingStore } from './store/bindingStore';
 import { useGroupStore } from './store/groupStore';
 import { connectLineBindings, disconnectLineBindings } from './sync/lineBindingSync';
-import { computeLineKey, isLockedForMe } from './utils/lineIdentity';
+import { computeLineKey, isLockedForMe, mustBindLine } from './utils/lineIdentity';
 import { applyLineResolution } from './utils/lineResolution';
 
 export default function App() {
+  useLineSpacesSync();
   const myMember = useMyMember();
   const code = useSyncStore((s) => s.code);
   const clearCode = useSyncStore((s) => s.clearCode);
@@ -34,6 +36,11 @@ export default function App() {
   const lineProfileMissing = (liffMode === 'client' || liffMode === 'external-loggedin') && !lineUserId;
   const myMemberLocked =
     !!myMember && bindingsReady && !lineProfileMissing && isLockedForMe(myMember.id, bindings, myLineKey);
+  // 用 LINE 進入、但這個 LINE 帳號在此空間還沒綁定任何成員：一律先綁定（選未綁定的成員或用 LINE 名稱加入）。
+  const bindFailed = useBindingStore((s) => (code ? !!s.bindFailedCodes[code] : false));
+  // 綁定清單讀取失敗時不知道有沒有綁定，不強制（避免要求已綁定的人重新綁定）。
+  const bindingsError = useBindingStore((s) => s.error);
+  const mustBind = bindingsReady && !bindingsError && !!lineUserId && mustBindLine(bindings, myLineKey, bindFailed);
 
   // 身分鎖定：本機記住的身分已綁定 LINE、但這次不是用那個 LINE 帳號開啟（或沒登入 LINE），畫面上視為沒有身分並提示。
   // 不清除本機記住的身分：同一個瀏覽器的其他分頁（例如已登入 LINE 的分頁）共用這份資料，清掉會把它們也踢出去。
@@ -60,7 +67,7 @@ export default function App() {
         console.error('無法計算 LINE 識別碼：', error);
         if (!cancelled) {
           useBindingStore.getState().reset(code, null);
-          useBindingStore.getState().setBindings({});
+          useBindingStore.getState().setBindingsError();
         }
       });
     // 名單變動（例如被其他裝置整份覆寫、少了綁定的成員）時也重新決定身分，必要時補回成員。
@@ -144,7 +151,7 @@ export default function App() {
   }
 
   // 目前身分已綁定別的（或需要登入的）LINE 帳號：不能沿用，回到身分選擇。
-  if (!myMember || myMemberLocked) return <IdentitySelect />;
+  if (!myMember || myMemberLocked || mustBind) return <IdentitySelect />;
 
   return (
     <Routes>

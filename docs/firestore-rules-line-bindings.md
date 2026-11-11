@@ -72,6 +72,46 @@ service cloud.firestore {
 }
 ```
 
+## 第二段：LINE 帳號的分帳空間清單（跨裝置列出你的空間）
+
+`lineSpaces/{userHash}` 存「這個 LINE 帳號參與的空間」：`{ spaces: { 同步碼: { memberName, updatedAt } }, v: 1 }`。
+文件 id 是 LINE userId 的 SHA-256 雜湊，只有拿得到你 LINE userId 的這個 app 算得出來。
+
+這段要放在 **`match /databases/{database}/documents { ... }` 裡、和 `match /ledgers/{code}` 同一層**（不是放在 ledgers 裡面）：
+
+```
+    match /lineSpaces/{userHash} {
+      // 只能用完整的文件 id 讀取，不能列出整個集合（避免被一次掃出所有清單）
+      allow get: if true;
+      allow list: if false;
+
+      allow create, update: if userHash.matches('^[0-9a-f]{64}$')
+                            && request.resource.data.keys().hasOnly(['spaces', 'v'])
+                            && request.resource.data.v == 1
+                            && request.resource.data.spaces is map
+                            && request.resource.data.spaces.size() <= 100;
+
+      allow delete: if false;
+    }
+```
+
+完整位置示意：
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /ledgers/{code} {
+      // ……你原本的規則與 lineBindings、lineKeys……
+    }
+
+    match /lineSpaces/{userHash} {
+      // ……上面那段……
+    }
+  }
+}
+```
+
 ## 限制（請知悉）
 
 - 目前沒有登入驗證（決策 13：可信身分先不做），所以規則**無法確認是誰在刪除**。知道同步碼又會寫程式的人，仍可直接呼叫 Firestore 刪除別人的綁定。這和現有帳本資料的保護程度相同：綁定是「免選名字」的便利功能，不是安全機制。
