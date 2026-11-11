@@ -6,6 +6,10 @@ import { useSyncStore } from '../store/syncStore';
 import { useRecentSpacesStore } from '../store/lastSpaceStore';
 import { useMyMember } from '../hooks/useMyMember';
 import PendingInviteBanner from './PendingInviteBanner';
+import LineBindingBar from './LineBindingBar';
+import { useBindingStore } from '../store/bindingStore';
+import { unbindMine } from '../sync/lineBindingSync';
+import { findMyBinding } from '../utils/lineIdentity';
 import { useLiffStore } from '../store/liffStore';
 import { buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
@@ -30,6 +34,47 @@ export default function Layout() {
   const switchedFrom = switched && switched.to === code ? switched.from : null;
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const myLineKey = useBindingStore((s) => (s.code === code && s.ready ? s.myLineKey : null));
+  const bindings = useBindingStore((s) => s.bindings);
+  const setOverridden = useBindingStore((s) => s.setOverridden);
+  const setNotice = useBindingStore((s) => s.setNotice);
+  const setSkipped = useBindingStore((s) => s.setSkipped);
+  const myBinding = findMyBinding(bindings, myLineKey);
+  const myBoundHere = !!myBinding && myBinding.memberId === myMember?.id;
+
+  async function unbindLine() {
+    if (!code || !myLineKey || !myMember) return;
+    if (!confirm(`解除這個 LINE 帳號與「${myMember.name}」的綁定？\n解除後，下次從 LINE 開啟需要重新選擇身分。`)) return;
+    // 使用者剛表示不要綁定：這次開啟期間不再建議綁回目前身分。
+    setSkipped(code);
+    try {
+      await unbindMine(code, myLineKey);
+      setNotice('已解除 LINE 綁定');
+    } catch (e) {
+      console.error('解除 LINE 綁定失敗：', e);
+      setNotice('解除 LINE 綁定失敗，請稍後再試');
+    }
+  }
+
+  function switchIdentity() {
+    if (!code || !confirm(`切換身分？目前身分為「${myMember?.name}」。`)) return;
+    if (myBinding && myLineKey) {
+      const unbind = confirm(
+        `這個 LINE 帳號綁定在「${myBinding.binding.memberName}」。要一併解除綁定嗎？\n\n確定：解除綁定\n取消：保留綁定（這次開啟期間不會自動切回）`,
+      );
+      // 不論是否解除，這次開啟期間都不再自動切回綁定的成員：
+      // 解除可能失敗或因離線而遲遲沒完成，期間的名單更新不該把手動選的身分換掉。
+      setOverridden(code);
+      if (unbind) {
+        // 不等待伺服器確認，先讓使用者重新選身分；失敗時再提示。
+        unbindMine(code, myLineKey).catch((e) => {
+          console.error('解除 LINE 綁定失敗：', e);
+          setNotice('解除 LINE 綁定失敗，請稍後再試');
+        });
+      }
+    }
+    clearMember(code);
+  }
 
   function copyCode() {
     if (!code) return;
@@ -99,10 +144,17 @@ export default function Layout() {
                 {linkCopied ? '✓' : '🔗'}
               </button>
             </div>
+            {myBoundHere && (
+              <button
+                onClick={() => void unbindLine()}
+                className="text-[11px] text-emerald-300 border border-emerald-400/30 bg-emerald-500/10 rounded-full px-2 py-1 hover:bg-emerald-500/20 whitespace-nowrap"
+                title="這個 LINE 帳號已綁定此身分；點擊可解除"
+              >
+                LINE ✓
+              </button>
+            )}
             <button
-              onClick={() => {
-                if (code && confirm(`切換身分？目前身分為「${myMember?.name}」。`)) clearMember(code);
-              }}
+              onClick={switchIdentity}
               className="flex items-center gap-1.5 text-xs text-slate-300 border border-slate-700 bg-slate-800/60 rounded-full px-3 py-1.5 hover:border-cyan-400/50 hover:text-cyan-300 whitespace-nowrap"
             >
               <span>👤</span>
@@ -132,6 +184,7 @@ export default function Layout() {
           ))}
         </nav>
       </header>
+      <LineBindingBar />
       <PendingInviteBanner className="border-b" />
       {switchedFrom && (
         <div className="bg-cyan-500/10 border-b border-cyan-400/20">

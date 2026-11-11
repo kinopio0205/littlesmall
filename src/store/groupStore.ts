@@ -11,6 +11,8 @@ interface GroupState {
   addRosterMember: (name: string) => string;
   /** 以新成員身分加入：同名或空白時回傳 null，不會把人對應到既有的同名成員。 */
   addRosterMemberStrict: (name: string) => string | null;
+  /** 以指定 id 補回成員（例如 LINE 綁定的成員被整份覆寫弄丟）；已存在就不動。 */
+  ensureRosterMember: (member: Member) => void;
 
   addGroup: (name: string, icon: string, memberNames: string[]) => string;
   updateGroup: (id: string, name: string, icon: string) => void;
@@ -49,6 +51,11 @@ export const useGroupStore = create<GroupState>()((set, get) => ({
     const id = uuid();
     set((state) => ({ members: [...state.members, { id, name: trimmed }] }));
     return id;
+  },
+
+  ensureRosterMember: (member) => {
+    if (get().members.some((m) => m.id === member.id)) return;
+    set((state) => ({ members: [...state.members, { id: member.id, name: member.name.trim() }] }));
   },
 
   addGroup: (name, icon, memberNames) => {

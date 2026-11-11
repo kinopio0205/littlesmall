@@ -15,13 +15,48 @@ import { useSyncStore } from './store/syncStore';
 import { connectSync, disconnectSync } from './sync/firestoreSync';
 import { useLiffStore } from './store/liffStore';
 import { useRecentSpacesStore } from './store/lastSpaceStore';
+import { useBindingStore } from './store/bindingStore';
+import { useGroupStore } from './store/groupStore';
+import { connectLineBindings, disconnectLineBindings } from './sync/lineBindingSync';
+import { computeLineKey } from './utils/lineIdentity';
+import { applyLineResolution } from './utils/lineResolution';
 
 export default function App() {
   const myMember = useMyMember();
   const code = useSyncStore((s) => s.code);
   const clearCode = useSyncStore((s) => s.clearCode);
+  const lineUserId = useLiffStore((s) => s.profile?.userId);
+  const bindingsReady = useBindingStore((s) => s.ready && s.code === code);
   const [syncReady, setSyncReady] = useState(false);
   const [syncError, setSyncError] = useState('');
+
+  // 已登入 LINE 時監聽這個空間的綁定清單；清單更新後重新依綁定決定身分。
+  useEffect(() => {
+    if (!code || !lineUserId) return;
+    let cancelled = false;
+    computeLineKey(code, lineUserId)
+      .then((key) => {
+        if (!cancelled) connectLineBindings(code, key, () => applyLineResolution(code));
+      })
+      .catch((error) => {
+        console.error('無法計算 LINE 識別碼：', error);
+        if (!cancelled) {
+          useBindingStore.getState().reset(code, null);
+          useBindingStore.getState().setBindings({});
+        }
+      });
+    // 名單變動（例如被其他裝置整份覆寫、少了綁定的成員）時也重新決定身分，必要時補回成員。
+    // 延到下一個 microtask：遠端資料套用中不會回寫，補回的成員要在套用結束後才會同步上雲端。
+    const unsubRoster = useGroupStore.subscribe((state, prev) => {
+      if (state.members !== prev.members) queueMicrotask(() => applyLineResolution(code));
+    });
+    return () => {
+      cancelled = true;
+      unsubRoster();
+      disconnectLineBindings();
+      useBindingStore.getState().reset(null, null);
+    };
+  }, [code, lineUserId]);
 
   // 換到其他空間後，「回到上一個空間」的提示就不再適用。
   useEffect(() => {
@@ -39,11 +74,14 @@ export default function App() {
     if (!code) return;
     setSyncReady(false);
     setSyncError('');
+    useBindingStore.getState().setRosterReady(null);
     connectSync(
       code,
       () => {
-        // 名單已載入：先把舊版的名字身分換成這個空間的 memberId，再決定要不要顯示身分選擇。
+        // 名單已載入：先把舊版的名字身分換成這個空間的 memberId、再套用 LINE 綁定，最後才決定要不要顯示身分選擇。
+        useBindingStore.getState().setRosterReady(code);
         applyLegacyIdentityMigration(code);
+        applyLineResolution(code);
         setSyncReady(true);
       },
       (message) => setSyncError(message),
@@ -69,7 +107,8 @@ export default function App() {
     );
   }
 
-  if (!syncReady) {
+  // 已登入 LINE 時，也要等綁定清單載入，才知道要自動辨識還是詢問身分（避免畫面先閃一下身分選擇）。
+  if (!syncReady || (lineUserId && !bindingsReady)) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-sm">

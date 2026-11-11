@@ -10,12 +10,15 @@ export interface IdentityPersisted {
    * 名單載入後再換成該空間的 memberId（見 utils/identityMigration.ts）。
    */
   legacyName: string | null;
+  /** 選了「此空間不再詢問」LINE 綁定的空間。 */
+  noLineAskByCode?: Record<string, true>;
 }
 
 interface IdentityState extends IdentityPersisted {
   setMember: (code: string, memberId: string) => void;
   clearMember: (code: string) => void;
   clearLegacyName: () => void;
+  setNoLineAsk: (code: string) => void;
 }
 
 export function migrateIdentity(persisted: unknown, version: number): IdentityPersisted {
@@ -27,6 +30,7 @@ export function migrateIdentity(persisted: unknown, version: number): IdentityPe
   return {
     byCode: (p.byCode as Record<string, string> | undefined) ?? {},
     legacyName: typeof p.legacyName === 'string' ? p.legacyName : null,
+    noLineAskByCode: (p.noLineAskByCode as Record<string, true> | undefined) ?? {},
   };
 }
 
@@ -43,12 +47,18 @@ export const useIdentityStore = create<IdentityState>()(
           return { byCode };
         }),
       clearLegacyName: () => set({ legacyName: null }),
+      noLineAskByCode: {},
+      setNoLineAsk: (code) => set((s) => ({ noLineAskByCode: { ...s.noLineAskByCode, [code]: true } })),
     }),
     {
       name: 'ledger-identity',
       version: 1,
       migrate: migrateIdentity,
-      partialize: (s): IdentityPersisted => ({ byCode: s.byCode, legacyName: s.legacyName }),
+      partialize: (s): IdentityPersisted => ({
+        byCode: s.byCode,
+        legacyName: s.legacyName,
+        noLineAskByCode: s.noLineAskByCode,
+      }),
     },
   ),
 );

@@ -21,3 +21,15 @@ describe('addRosterMemberStrict', () => {
     expect(useGroupStore.getState().addRosterMemberStrict('   ')).toBeNull();
   });
 });
+
+describe('ensureRosterMember', () => {
+  it('以指定 id 補回不在名單中的成員', () => {
+    useGroupStore.getState().ensureRosterMember({ id: 'm9', name: '阿美' });
+    expect(useGroupStore.getState().members).toContainEqual({ id: 'm9', name: '阿美' });
+  });
+
+  it('已存在的 id 不重複加入、不改名', () => {
+    useGroupStore.getState().ensureRosterMember({ id: 'm1', name: '改名' });
+    expect(useGroupStore.getState().members).toEqual([{ id: 'm1', name: '小明' }]);
+  });
+});

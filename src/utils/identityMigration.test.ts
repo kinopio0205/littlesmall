@@ -24,7 +24,11 @@ describe('migrateIdentity（localStorage ledger-identity）', () => {
     expect(migrateIdentity({ byCode: { ABCD: 'm1' }, legacyName: null }, 1)).toEqual({
       byCode: { ABCD: 'm1' },
       legacyName: null,
+      noLineAskByCode: {},
     });
+    expect(
+      migrateIdentity({ byCode: {}, legacyName: null, noLineAskByCode: { ABCD: true } }, 1).noLineAskByCode,
+    ).toEqual({ ABCD: true });
   });
 });
 
