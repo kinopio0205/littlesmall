@@ -3,8 +3,13 @@ export function buildLiffInviteUrl(liffId: string, code: string): string {
   return `https://miniapp.line.me/${liffId}?space=${encodeURIComponent(code)}`;
 }
 
-export function buildShareText(inviteUrl: string): string {
-  return `來「小呆記帳」一起分帳吧！點連結加入分帳空間：\n${inviteUrl}`;
+/**
+ * 分享訊息。LINE MINI App 連結只能在手機 LINE 內開啟（電腦瀏覽器只會顯示 QR Code），
+ * 所以同時附上網頁連結給電腦使用；網頁版可用「用 LINE 登入」辨識身分。
+ */
+export function buildShareText(liffUrl: string | null, webUrl: string): string {
+  if (!liffUrl) return `來「小呆記帳」一起分帳吧！點連結加入分帳空間：\n${webUrl}`;
+  return `來「小呆記帳」一起分帳吧！點連結加入分帳空間：\n手機 LINE：${liffUrl}\n電腦瀏覽器：${webUrl}`;
 }
 
 /** LINE 官方的分享網址：在一般瀏覽器或不能用 shareTargetPicker 時，開啟 LINE 選擇要傳給誰。 */

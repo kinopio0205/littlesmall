@@ -113,7 +113,7 @@ export default function IdentitySelect() {
 
         {notice && <p className="mb-4 text-xs text-amber-300 text-center">{notice}</p>}
 
-        {(liffMode === 'external-guest' || (liffMode === 'off' && !!LIFF_ID && anyLocked)) && (
+        {(liffMode === 'external-guest' || (liffMode === 'off' && !!LIFF_ID)) && (
           <button
             onClick={() => {
               if (liffMode === 'external-guest') {

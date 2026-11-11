@@ -19,8 +19,7 @@ export default function ShareToLineButton({ code }: { code: string }) {
   const setNotice = useBindingStore((s) => s.setNotice);
   const [busy, setBusy] = useState(false);
 
-  const inviteUrl = LIFF_ID ? buildLiffInviteUrl(LIFF_ID, code) : buildInviteUrl(code);
-  const text = buildShareText(inviteUrl);
+  const text = buildShareText(LIFF_ID ? buildLiffInviteUrl(LIFF_ID, code) : null, buildInviteUrl(code));
   const usePicker = canShare && (mode === 'client' || mode === 'external-loggedin');
   const mobile = isMobileDevice(navigator.userAgent, navigator.maxTouchPoints ?? 0);
 

@@ -10,8 +10,20 @@ describe('buildLiffInviteUrl', () => {
 });
 
 describe('buildShareText', () => {
+  it('同時提供手機 LINE 連結與電腦網頁連結（MINI App 連結在電腦上只會顯示 QR Code）', () => {
+    const text = buildShareText('https://miniapp.line.me/x?space=ABCD', 'https://a.github.io/littlesmall/?space=ABCD&code=ABCD');
+    expect(text).toContain('手機 LINE：https://miniapp.line.me/x?space=ABCD');
+    expect(text).toContain('電腦瀏覽器：https://a.github.io/littlesmall/?space=ABCD&code=ABCD');
+  });
+
+  it('沒有 LINE 連結時只放網頁連結', () => {
+    const text = buildShareText(null, 'https://a.github.io/littlesmall/?space=ABCD&code=ABCD');
+    expect(text).toContain('https://a.github.io/littlesmall/?space=ABCD&code=ABCD');
+    expect(text).not.toContain('手機 LINE');
+  });
+
   it('包含邀請連結與說明', () => {
-    const text = buildShareText('https://miniapp.line.me/x?space=ABCD');
+    const text = buildShareText('https://miniapp.line.me/x?space=ABCD', 'https://web/?space=ABCD');
     expect(text).toContain('https://miniapp.line.me/x?space=ABCD');
     expect(text).toContain('小呆記帳');
   });
