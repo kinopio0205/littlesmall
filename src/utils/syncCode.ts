@@ -11,7 +11,10 @@ export function normalizeSyncCode(input: string): string {
   return input.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-/** Shareable link that auto-joins the sync space when opened fresh (no existing code). */
+/**
+ * 分享用的邀請網址。固定用網站根路徑（不受目前頁面路徑影響）。
+ * 參數改名為 space；過渡期同時帶舊的 code，讓還在用舊版網頁的人也能加入。
+ */
 export function buildInviteUrl(code: string): string {
-  return `${window.location.origin}${window.location.pathname}?code=${code}`;
+  return `${window.location.origin}${import.meta.env.BASE_URL}?space=${code}&code=${code}`;
 }

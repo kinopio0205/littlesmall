@@ -5,7 +5,8 @@ import { useIdentityStore } from '../store/identityStore';
 import { useSyncStore } from '../store/syncStore';
 import { useRecentSpacesStore } from '../store/lastSpaceStore';
 import { useMyMember } from '../hooks/useMyMember';
-import { usePendingInviteStore } from '../store/pendingInviteStore';
+import PendingInviteBanner from './PendingInviteBanner';
+import { useLiffStore } from '../store/liffStore';
 import { buildInviteUrl } from '../utils/syncCode';
 import Logo from './Logo';
 
@@ -24,8 +25,9 @@ export default function Layout() {
   const setCode = useSyncStore((s) => s.setCode);
   const clearCode = useSyncStore((s) => s.clearCode);
   const rememberSpace = useRecentSpacesStore((s) => s.rememberSpace);
-  const pendingCode = usePendingInviteStore((s) => s.pendingCode);
-  const clearPendingInvite = usePendingInviteStore((s) => s.clearPending);
+  const switched = useLiffStore((s) => s.switched);
+  const setSwitched = useLiffStore((s) => s.setSwitched);
+  const switchedFrom = switched && switched.to === code ? switched.from : null;
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -53,12 +55,11 @@ export default function Layout() {
     }
   }
 
-  function acceptInvite() {
-    if (!pendingCode) return;
-    // 身分依空間記在 identityStore.byCode，切換空間不需要清除；回來時會自動沿用。
+  function returnToSwitchedFrom() {
+    if (!switchedFrom) return;
     if (code) rememberSpace(code, myMember?.name);
-    setCode(pendingCode);
-    clearPendingInvite();
+    setCode(switchedFrom);
+    setSwitched(null);
   }
 
   return (
@@ -131,24 +132,25 @@ export default function Layout() {
           ))}
         </nav>
       </header>
-      {pendingCode && pendingCode !== code && (
+      <PendingInviteBanner className="border-b" />
+      {switchedFrom && (
         <div className="bg-cyan-500/10 border-b border-cyan-400/20">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
             <span className="text-cyan-200">
-              有邀請連結想加入分帳空間 <span className="font-mono">{pendingCode}</span>
+              已透過邀請連結切換到 <span className="font-mono">{code}</span>
             </span>
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={acceptInvite}
-                className="text-xs px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-500 to-violet-600 text-white hover:from-cyan-400 hover:to-violet-500"
+                onClick={returnToSwitchedFrom}
+                className="text-xs px-3 py-1.5 rounded-full border border-cyan-400/40 text-cyan-300 hover:bg-cyan-500/10"
               >
-                切換過去
+                回到 <span className="font-mono">{switchedFrom}</span>
               </button>
               <button
-                onClick={clearPendingInvite}
+                onClick={() => setSwitched(null)}
                 className="text-xs px-3 py-1.5 rounded-full border border-slate-700 text-slate-400 hover:text-slate-200"
               >
-                忽略
+                知道了
               </button>
             </div>
           </div>

@@ -31,7 +31,18 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # 正式版的 LIFF ID（Published）放在 repo 的 Actions Variables：LIFF_ID。沒設定就停止部署，避免上線後 LINE 功能失效。
+      - name: Check LIFF_ID variable
+        env:
+          LIFF_ID: ${{ vars.LIFF_ID }}
+        run: |
+          if [ -z "$LIFF_ID" ]; then
+            echo "::error::請到 repo 的 Settings → Secrets and variables → Actions → Variables 新增 LIFF_ID"
+            exit 1
+          fi
       - run: npm run build
+        env:
+          VITE_LIFF_ID: ${{ vars.LIFF_ID }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

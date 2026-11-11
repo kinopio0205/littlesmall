@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Layout from './components/Layout';
 import SyncGate from './components/SyncGate';
@@ -12,53 +12,28 @@ import GroupDetail from './pages/GroupDetail';
 import { useMyMember } from './hooks/useMyMember';
 import { applyLegacyIdentityMigration } from './utils/identityMigration';
 import { useSyncStore } from './store/syncStore';
-import { usePendingInviteStore } from './store/pendingInviteStore';
 import { connectSync, disconnectSync } from './sync/firestoreSync';
-import { normalizeSyncCode } from './utils/syncCode';
+import { useLiffStore } from './store/liffStore';
+import { useRecentSpacesStore } from './store/lastSpaceStore';
 
 export default function App() {
   const myMember = useMyMember();
   const code = useSyncStore((s) => s.code);
-  const setCode = useSyncStore((s) => s.setCode);
   const clearCode = useSyncStore((s) => s.clearCode);
-  const setPendingInvite = usePendingInviteStore((s) => s.setPending);
   const [syncReady, setSyncReady] = useState(false);
   const [syncError, setSyncError] = useState('');
 
+  // 換到其他空間後，「回到上一個空間」的提示就不再適用。
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const invited = params.get('code');
-    if (!invited) return;
+    const { switched, setSwitched } = useLiffStore.getState();
+    if (switched && switched.to !== code) setSwitched(null);
+  }, [code]);
 
-    params.delete('code');
-    const query = params.toString();
-    window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
-
-    const normalized = normalizeSyncCode(invited);
-    if (normalized.length < 4) return;
-
-    // Wait for the persisted sync code to actually finish loading from localStorage
-    // before deciding whether we're "already in a space" — reading getState() before
-    // hydration completes would otherwise look like a fresh browser with no space yet.
-    function apply() {
-      const currentCode = useSyncStore.getState().code;
-      if (!currentCode) {
-        setCode(normalized);
-      } else if (normalized !== currentCode) {
-        setPendingInvite(normalized);
-      }
-    }
-
-    if (useSyncStore.persist.hasHydrated()) {
-      apply();
-    } else {
-      const unsub = useSyncStore.persist.onFinishHydration(() => {
-        apply();
-        unsub();
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // 選定身分後記住這個空間與名字：之後從別處切換（例如 LINE 連結）時，「返回上一個空間」能顯示名字。
+  const myName = myMember?.name;
+  useEffect(() => {
+    if (code && myName) useRecentSpacesStore.getState().rememberSpace(code, myName);
+  }, [code, myName]);
 
   useEffect(() => {
     if (!code) return;
@@ -122,6 +97,8 @@ export default function App() {
         <Route path="/balances" element={<Balances />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/groups/:groupId" element={<GroupDetail />} />
+        {/* 不認得的路徑（例如殘留的 LINE 憑證 hash）一律回首頁，避免整頁空白 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );
