@@ -1,4 +1,11 @@
-import { doc, onSnapshot, setDoc, type DocumentData } from 'firebase/firestore';
+import {
+  doc,
+  onSnapshot,
+  runTransaction,
+  setDoc,
+  type DocumentData,
+  type DocumentReference,
+} from 'firebase/firestore';
 import { v4 as uuid } from 'uuid';
 import { db } from '../firebase';
 import { useGroupStore } from '../store/groupStore';
@@ -92,6 +99,21 @@ function migrateLedgerDoc(raw: DocumentData): { doc: LedgerDoc; migrated: boolea
   return { doc: { members: roster, groups, expenses, settlements }, migrated: true };
 }
 
+const EMPTY_LEDGER: LedgerDoc = { members: [], groups: [], expenses: [], settlements: [] };
+
+/**
+ * 只在文件仍不存在時建立空帳本。固定寫入空帳本而不是讀當下的 store：
+ * transaction 等待期間使用者可能已切到別的空間，store 裡會是另一個空間的資料。
+ */
+export async function createLedgerIfMissing(ref: DocumentReference) {
+  await runTransaction(db, async (tx) => {
+    const current = await tx.get(ref);
+    if (!current.exists()) {
+      tx.set(ref, EMPTY_LEDGER);
+    }
+  });
+}
+
 let unsubscribeSnapshot: (() => void) | null = null;
 let unsubscribeStore: (() => void) | null = null;
 let applyingRemote = false;
@@ -105,7 +127,12 @@ export function connectSync(code: string, onReady?: () => void, onError?: (messa
 
   unsubscribeSnapshot = onSnapshot(
     ref,
+    // 需要 metadata 變化：離線開啟全新空間時，恢復連線後伺服器確認「不存在」只改變 fromCache，
+    // 資料本身沒變；不開這個選項就收不到通知，畫面會永遠停在「連線中…」。
+    { includeMetadataChanges: true },
     (snap) => {
+      // 本機寫入尚未送達的回音：store 已經是這份資料，略過以免重複套用。
+      if (snap.metadata.hasPendingWrites) return;
       if (snap.exists()) {
         const { doc: ledger, migrated } = migrateLedgerDoc(snap.data());
         applyingRemote = true;
@@ -114,8 +141,17 @@ export function connectSync(code: string, onReady?: () => void, onError?: (messa
         if (migrated) {
           setDoc(ref, ledger);
         }
+      } else if (snap.metadata.fromCache) {
+        // 「不存在」只來自本機快取（例如離線開啟、記憶體快取是空的），不代表雲端沒有帳本。
+        // 這時建檔會讓一筆空帳本排進寫入佇列，恢復連線後整份覆寫雲端資料；
+        // 所以不建檔、也不進入 ready，等伺服器給出答案。
+        return;
       } else {
-        setDoc(ref, toLedgerDoc(useGroupStore.getState()));
+        // 伺服器確認不存在才建檔，並用 transaction 確保只在文件仍不存在時寫入，
+        // 避免覆寫其他裝置在這段期間剛寫入的帳本。
+        createLedgerIfMissing(ref).catch((error) => {
+          console.error('Firestore create ledger error:', error);
+        });
       }
       if (firstSnapshot) {
         firstSnapshot = false;

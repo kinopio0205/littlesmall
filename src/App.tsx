@@ -91,8 +91,17 @@ export default function App() {
 
   if (!syncReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-slate-500 text-sm">連線中…</div>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="text-slate-500 text-sm mb-3">連線中…</div>
+          {/* 離線時會一直停在這裡等伺服器回應（不會用本機空資料進入），所以要給使用者離開的路。 */}
+          <button
+            onClick={clearCode}
+            className="text-xs text-slate-500 border border-slate-700 rounded-full px-3 py-1.5 hover:text-cyan-300 hover:border-cyan-400/30"
+          >
+            重新輸入同步碼
+          </button>
+        </div>
       </div>
     );
   }
